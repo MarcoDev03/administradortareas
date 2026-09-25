@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGradMask" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#4338ca" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+    <linearGradient id="barGradMask" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e0e7ff" />
+    </linearGradient>
+  </defs>
+
+  <!-- Full Background for Maskable -->
+  <rect width="512" height="512" fill="url(#bgGradMask)" />
+
+  <!-- Centered Safe Area Kanban Columns -->
+  <g transform="translate(40, 40) scale(0.84)">
+    <!-- Column 1 -->
+    <rect x="100" y="120" width="80" height="272" rx="18" fill="url(#barGradMask)" />
+    <rect x="114" y="142" width="52" height="60" rx="8" fill="#4f46e5" fill-opacity="0.25" />
+    <rect x="114" y="216" width="52" height="90" rx="8" fill="#4f46e5" fill-opacity="0.25" />
+    <rect x="114" y="320" width="52" height="48" rx="8" fill="#4f46e5" fill-opacity="0.25" />
+
+    <!-- Column 2 -->
+    <rect x="216" y="120" width="80" height="200" rx="18" fill="url(#barGradMask)" />
+    <rect x="230" y="142" width="52" height="80" rx="8" fill="#4f46e5" fill-opacity="0.25" />
+    <rect x="230" y="236" width="52" height="60" rx="8" fill="#4f46e5" fill-opacity="0.25" />
+
+    <!-- Column 3 -->
+    <rect x="332" y="120" width="80" height="240" rx="18" fill="url(#barGradMask)" />
+    <rect x="346" y="142" width="52" height="110" rx="8" fill="#4f46e5" fill-opacity="0.25" />
+    <rect x="346" y="266" width="52" height="70" rx="8" fill="#4f46e5" fill-opacity="0.25" />
+  </g>
+</svg>
