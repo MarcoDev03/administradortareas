@@ -93,7 +93,7 @@ Los archivos existentes fueron modificados para:
 ---
 
 
-# 5. Características implementadas
+# 5. Características implementadas.
 
 * Instalación de la aplicación desde el navegador.
 * Web App Manifest.
