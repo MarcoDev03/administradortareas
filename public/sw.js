@@ -10,7 +10,7 @@
  * 4. API/JSON calls -> Network Only.
  */
 
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.0.1';
 const STATIC_CACHE_NAME = 'negociomanager-static-' + CACHE_VERSION;
 const OFFLINE_CACHE_NAME = 'negociomanager-offline-' + CACHE_VERSION;
 

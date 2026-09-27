@@ -87,4 +87,133 @@
         if (window.lucide) lucide.createIcons();
     }
 </script>
+
+</script>
+
+
+{{-- ========================================================= --}}
+{{-- TARJETA DE INSTALACIÓN PWA --}}
+{{-- ========================================================= --}}
+
+<div
+    id="pwa-install-card"
+    class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md z-50"
+>
+    <div
+        class="relative bg-slate-800/95 backdrop-blur-xl border border-slate-700/70 rounded-2xl shadow-2xl shadow-black/40 p-4 sm:p-5"
+    >
+
+        {{-- Botón cerrar --}}
+        <button
+            type="button"
+            id="pwa-install-close"
+            class="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/70 transition"
+            aria-label="Cerrar"
+        >
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+
+
+        <div class="flex items-start gap-4 pr-8">
+
+            {{-- Icono --}}
+            <div
+                class="shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-600/20"
+            >
+                <i
+                    data-lucide="download"
+                    class="w-6 h-6 text-white"
+                ></i>
+            </div>
+
+
+            {{-- Texto --}}
+            <div class="flex-1 min-w-0">
+
+                <h3 class="text-sm font-bold text-white">
+                    Instalar aplicación
+                </h3>
+
+                <p class="text-xs text-slate-400 mt-1 leading-relaxed">
+                    Instala la aplicación para acceder más rápido
+                    y disfrutar de una mejor experiencia.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        {{-- Botón descargar --}}
+        <button
+            type="button"
+            id="pwa-install-btn"
+            onclick="triggerPWAInstall()"
+            class="w-full mt-4 py-2.5 px-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-600/20 transition transform active:scale-[0.98] flex items-center justify-center gap-2"
+        >
+
+            <i
+                data-lucide="download"
+                class="w-4 h-4"
+            ></i>
+
+            <span>Descargar aplicación</span>
+
+        </button>
+
+    </div>
+</div>
+
+
+<script>
+
+    /*
+    |--------------------------------------------------------------------------
+    | Mostrar tarjeta cuando la PWA pueda instalarse
+    |--------------------------------------------------------------------------
+    */
+
+    window.addEventListener('pwa-installable', function () {
+
+        const card = document.getElementById('pwa-install-card');
+
+        if (!card) {
+            return;
+        }
+
+        card.classList.remove('hidden');
+
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    });
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cerrar tarjeta
+    |--------------------------------------------------------------------------
+    */
+
+    const pwaCloseButton =
+        document.getElementById('pwa-install-close');
+
+    if (pwaCloseButton) {
+
+        pwaCloseButton.addEventListener('click', function () {
+
+            const card =
+                document.getElementById('pwa-install-card');
+
+            if (card) {
+                card.classList.add('hidden');
+            }
+
+        });
+
+    }
+
+</script>
+
+
 @endsection
