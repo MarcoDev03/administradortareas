@@ -1165,21 +1165,23 @@
                     </div>
 
                     <!-- Asignar Usuarios -->
-                    <div>
-                        <label class="block text-xs font-medium text-slate-700 mb-1">Asignar a Usuarios</label>
-                        <div class="border border-slate-200 rounded-lg max-h-28 overflow-y-auto divide-y divide-slate-100">
-                            @foreach($activeProject->members as $u)
-                                <label class="flex items-center space-x-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-slate-50">
-                                    <input type="checkbox" name="assigned_user_ids[]" value="{{ $u->id }}" class="task-user-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-600">
-                                    <span class="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 text-[8px] font-bold flex items-center justify-center shrink-0">
-                                        {{ $u->initials }}
-                                    </span>
-                                    <span class="text-slate-700 truncate">{{ $u->name }}</span>
-                                    <span class="text-slate-400 shrink-0">({{ $u->role }})</span>
-                                </label>
-                            @endforeach
-                        </div>
-                    </div>
+@if($activeProject)
+<div>
+    <label class="block text-xs font-medium text-slate-700 mb-1">Asignar a Usuarios</label>
+    <div class="border border-slate-200 rounded-lg max-h-28 overflow-y-auto divide-y divide-slate-100">
+        @foreach($activeProject->members as $u)
+            <label class="flex items-center space-x-2 px-2.5 py-1.5 text-xs cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" name="assigned_user_ids[]" value="{{ $u->id }}" class="task-user-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 accent-indigo-600">
+                <span class="w-4 h-4 rounded-full bg-indigo-100 text-indigo-700 text-[8px] font-bold flex items-center justify-center shrink-0">
+                    {{ $u->initials }}
+                </span>
+                <span class="text-slate-700 truncate">{{ $u->name }}</span>
+                <span class="text-slate-400 shrink-0">({{ $u->role }})</span>
+            </label>
+        @endforeach
+    </div>
+</div>
+@endif
                 </div>
             </div>
 
@@ -1509,18 +1511,20 @@
                 </span>
             </label>
 
-            <!-- Asignar Usuarios -->
-            <div>
-                <label class="block text-xs font-semibold text-slate-700 mb-1">Asignar Usuarios</label>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg max-h-32 overflow-y-auto">
-                    @foreach($activeProject->members as $u)
-                        <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
-                            <input type="checkbox" name="assigned_user_ids[]" value="{{ $u->id }}" class="rec-user-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="truncate">{{ $u->name }} <span class="text-[10px] text-slate-400">({{ $u->role }})</span></span>
-                        </label>
-                    @endforeach
-                </div>
-            </div>
+           <!-- Asignar Usuarios -->
+@if($activeProject)
+<div>
+    <label class="block text-xs font-semibold text-slate-700 mb-1">Asignar Usuarios</label>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-lg max-h-32 overflow-y-auto">
+        @foreach($activeProject->members as $u)
+            <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                <input type="checkbox" name="assigned_user_ids[]" value="{{ $u->id }}" class="rec-user-checkbox rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                <span class="truncate">{{ $u->name }} <span class="text-[10px] text-slate-400">({{ $u->role }})</span></span>
+            </label>
+        @endforeach
+    </div>
+</div>
+@endif
 
             <!-- Subtareas Plantilla -->
             <div class="pt-2 border-t border-slate-100">

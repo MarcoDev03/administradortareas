@@ -67,3 +67,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 });
 
+// Ruta pública informativa y de instalación PWA
+Route::get('/descargar', function () {
+    return view('pwa.download');
+})->name('pwa.download');
+
+Route::get('/download', function () {
+    return redirect()->route('pwa.download');
+});
+
+
