@@ -8,13 +8,13 @@
 
     <!-- PWA Settings & Manifest -->
     <link rel="manifest" href="{{ asset('manifest.json') }}">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="NegocioManager">
-    <link rel="icon" type="image/webp" href="{{ asset('icons/icono-agenda.webp') }}">
-    <link rel="apple-touch-icon" href="{{ asset('icons/icono-agenda.webp') }}">
+    <link rel="icon" type="image/png" href="{{ asset('icons/iconoround.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('icons/iconoround.png') }}">
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -49,8 +49,8 @@
     <header class="w-full border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-xl sticky top-0 z-40">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
             <a href="{{ route('login') }}" class="flex items-center gap-3 group transition">
-                <div class="w-9 h-9 rounded-xl overflow-hidden shadow-md shadow-indigo-600/20 border border-slate-700/80 bg-slate-800 p-0.5 group-hover:border-indigo-500 transition">
-                    <img src="{{ asset('icons/icono-agenda.webp') }}" alt="NegocioManager Logo" class="w-full h-full object-cover rounded-lg" onerror="this.src='{{ asset('icons/icono-agenda.jpg') }}'">
+                <div class="w-9 h-9 flex items-center justify-center shrink-0">
+                    <img src="{{ asset('icons/iconoround.png') }}" alt="Gestor de Proyectos Logo" class="w-full h-full object-contain">
                 </div>
                 <div class="flex flex-col">
                     <span class="font-bold text-sm sm:text-base text-white tracking-tight group-hover:text-indigo-400 transition">Gestor de Proyectos</span>
@@ -93,8 +93,8 @@
             <div class="relative z-10 flex flex-col md:flex-row items-center gap-6 sm:gap-8">
                 <!-- App Icon -->
                 <div class="shrink-0 flex flex-col items-center">
-                    <div class="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl overflow-hidden shadow-2xl shadow-indigo-600/30 border-2 border-indigo-500/40 bg-slate-900 p-1">
-                        <img src="{{ asset('icons/icono-agenda.webp') }}" alt="NegocioManager Icon" class="w-full h-full object-cover rounded-2xl" onerror="this.src='{{ asset('icons/icono-agenda.jpg') }}'">
+                    <div class="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl overflow-hidden shadow-2xl shadow-indigo-600/40 border border-indigo-500/30 bg-gradient-to-br from-slate-800/90 via-indigo-950/80 to-slate-900 p-3 sm:p-4 flex items-center justify-center backdrop-blur-md">
+                        <img src="{{ asset('icons/iconoround.png') }}" alt="Gestor de Proyectos Icon" class="w-full h-full object-contain drop-shadow-2xl">
                     </div>
                     <span class="mt-2 text-[11px] font-medium text-slate-400 flex items-center gap-1">
                         <i data-lucide="check-circle" class="w-3 h-3 text-emerald-400"></i>
@@ -346,8 +346,8 @@
                             <!-- Mini App Header -->
                             <div class="flex items-center justify-between pb-2 border-b border-slate-800">
                                 <div class="flex items-center gap-2">
-                                    <div class="w-6 h-6 rounded-lg overflow-hidden border border-indigo-500/40">
-                                        <img src="{{ asset('icons/icono-agenda.webp') }}" class="w-full h-full object-cover" alt="icon" onerror="this.src='{{ asset('icons/icono-agenda.jpg') }}'">
+                                    <div class="w-6 h-6 flex items-center justify-center shrink-0">
+                                        <img src="{{ asset('icons/iconoround.png') }}" class="w-full h-full object-contain" alt="icon">
                                     </div>
                                     <span class="text-[11px] font-bold text-white">Gestor de Proyectos</span>
                                 </div>

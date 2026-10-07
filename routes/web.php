@@ -10,6 +10,7 @@ use App\Http\Controllers\SubtaskController;
 use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TaskCommentController;
+use App\Http\Controllers\ConfigController;
 
 // Rutas de invitados (Login)
 Route::middleware('guest')->group(function () {
@@ -38,6 +39,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.updateStatus');
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+    Route::patch('/tasks/{id}/restore', [TaskController::class, 'restore'])->name('tasks.restore');
+    Route::delete('/tasks/{id}/force', [TaskController::class, 'forceDestroy'])->name('tasks.forceDestroy');
 
     // Comentarios de Tareas
     Route::get('/tasks/{task}/comments', [TaskCommentController::class, 'index'])->name('tasks.comments.index');
@@ -61,10 +64,14 @@ Route::middleware('auth')->group(function () {
     Route::patch('/recurring-tasks/{recurringTask}/toggle', [\App\Http\Controllers\RecurringTaskController::class, 'toggleActive'])->name('recurring-tasks.toggleActive');
     Route::delete('/recurring-tasks/{recurringTask}', [\App\Http\Controllers\RecurringTaskController::class, 'destroy'])->name('recurring-tasks.destroy');
 
-    // Usuarios (Gestión de equipo)
+    // Usuarios (Gestión de Usuarios)
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+    // Configuración
+    Route::get('/configuracion', [ConfigController::class, 'index'])->name('config.index');
+    Route::put('/configuracion/estados', [ConfigController::class, 'update'])->name('config.estados.update');
 });
 
 // Ruta pública informativa y de instalación PWA

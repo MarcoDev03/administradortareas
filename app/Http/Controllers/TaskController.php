@@ -255,6 +255,41 @@ class TaskController extends Controller
     public function destroy(Task $task)
     {
         $task->delete();
-        return back()->with('success', 'Tarea eliminada exitosamente.');
+        return back()->with('success', 'Tarea enviada a la papelera exitosamente.');
+    }
+
+    public function restore($id)
+    {
+        $user = Auth::user();
+
+        $task = Task::onlyTrashed()
+            ->whereHas('assignedUsers', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            })
+            ->findOrFail($id);
+
+        $task->restore();
+
+        return back()->with('success', 'Tarea restablecida exitosamente.');
+    }
+
+    public function forceDestroy($id)
+    {
+        $user = Auth::user();
+        $task = Task::onlyTrashed()->findOrFail($id);
+
+        if (!$user->hasFullAccess() && !$task->assignedUsers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'No autorizado.');
+        }
+
+        DB::transaction(function () use ($task) {
+            $task->assignedUsers()->detach();
+            $task->subtasks()->delete();
+            $task->comments()->delete();
+            $task->forceDelete();
+        });
+
+        return back()->with('success', 'Tarea eliminada definitivamente.');
     }
 }
+

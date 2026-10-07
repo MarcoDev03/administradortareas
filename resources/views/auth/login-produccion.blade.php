@@ -4,9 +4,11 @@
 <div class="w-full max-w-md">
     <div class="bg-slate-800/80 backdrop-blur-xl border border-slate-700/60 shadow-2xl rounded-2xl p-5 sm:p-8">
         <div class="flex flex-col items-center text-center mb-8">
-            
-            <h1 class="text-2xl font-bold text-white tracking-tight">Gestor de Tareas</h1>
-            
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center shrink-0 shadow-xl shadow-indigo-900/40 p-2 mb-3.5">
+                <img src="{{ asset('icons/iconoround.png') }}" alt="NegocioManager" class="w-12 h-12 object-contain drop-shadow-md">
+            </div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">NegocioManager</h1>
+            <p class="text-xs text-slate-400 mt-1">Inicia sesión para acceder a tus proyectos y tareas</p>
         </div>
 
         @if ($errors->any())
@@ -86,8 +88,6 @@
 
         if (window.lucide) lucide.createIcons();
     }
-</script>
-
 </script>
 
 

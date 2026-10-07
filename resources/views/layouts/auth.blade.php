@@ -7,13 +7,13 @@
 
     <!-- PWA Settings & Manifest -->
     <link rel="manifest" href="{{ asset('manifest.json') }}">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="NegocioManager">
-    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('icons/icon-192x192.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('icons/icon-192x192.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('icons/iconoround.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('icons/iconoround.png') }}">
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,12 +21,12 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; }
     </style>
 </head>
-<body class="min-h-full flex items-center justify-center p-4 py-8 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-slate-100">
+<body class="min-h-full flex items-center justify-center p-4 py-8 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-slate-100 antialiased">
     @yield('content')
     <script>
         document.addEventListener('DOMContentLoaded', () => {

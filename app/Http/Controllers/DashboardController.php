@@ -39,7 +39,7 @@ class DashboardController extends Controller
         $activeModuleId = $request->query('module_id', 'all');
 
         // Vista activa
-        $activeView = $request->query('view', 'calendario');
+        $activeView = $request->query('view', 'resumen');
 
         // Tareas según rol y proyecto activo (TODAS — para el calendario y como base)
         $tasksQuery = Task::with(['project', 'module', 'assignedUsers', 'subtasks', 'creator'])->withCount('comments');
@@ -116,6 +116,10 @@ class DashboardController extends Controller
 
         $filteredTasks = $taskFilter === 'mes' ? $monthTasks : $todayTasks;
 
+        // Tareas vencidas: pendientes con fecha previa calculadas con la lógica existente isOverdue()
+        $overdueTasks = $tasks->filter(fn ($task) => $task->isOverdue())->values();
+        $overdueCount = $overdueTasks->count();
+
         // Módulos del proyecto activo (o de todos los proyectos visibles)
         $modules = $activeProject
             ? $activeProject->modules
@@ -133,7 +137,7 @@ class DashboardController extends Controller
         // Todos los usuarios (para modales de asignación y miembros)
         $allUsers = User::all();
 
-        // Reglas de Tareas Periódicas
+        // Tareas Periódicas
         $recurringTasksQuery = \App\Models\RecurringTask::with(['project', 'module', 'assignedUsers', 'subtasks', 'creator']);
         if ($activeProject) {
             $recurringTasksQuery->where('project_id', $activeProject->id);
@@ -150,6 +154,36 @@ class DashboardController extends Controller
         }
         $recurringTasks = $recurringTasksQuery->orderBy('created_at', 'desc')->get();
 
+        // -------------------------------------------------------------
+        // Papelera de tareas eliminadas (Retención de 30 días)
+        // -------------------------------------------------------------
+        \App\Services\TaskTrashService::purgeExpiredTasks(30);
+
+        $trashFilter = $request->query('trash_filter', 'todas');
+
+        $trashedBaseQuery = Task::onlyTrashed()
+            ->with(['project', 'module', 'assignedUsers', 'subtasks', 'creator'])
+            ->whereHas('assignedUsers', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            })
+            ->whereIn('project_id', $visibleProjects->pluck('id'))
+            ->where('deleted_at', '>=', Carbon::now()->subDays(30));
+
+        $allTrashCount = (clone $trashedBaseQuery)->count();
+
+        $trashedTasksQuery = clone $trashedBaseQuery;
+
+        if ($trashFilter === 'dia' || $trashFilter === 'hoy') {
+            $trashedTasksQuery->where('deleted_at', '>=', Carbon::today()->startOfDay());
+        } elseif ($trashFilter === 'semana') {
+            $trashedTasksQuery->where('deleted_at', '>=', Carbon::now()->startOfWeek());
+        } elseif ($trashFilter === 'mes') {
+            $trashedTasksQuery->where('deleted_at', '>=', Carbon::now()->startOfMonth());
+        }
+
+        $trashedTasks = $trashedTasksQuery->orderBy('deleted_at', 'desc')->get();
+        $trashedTasksCount = $allTrashCount;
+
         return view('dashboard.index', compact(
             'user',
             'visibleProjects',
@@ -160,11 +194,17 @@ class DashboardController extends Controller
             'filteredTasks',
             'todayTasks',
             'monthTasks',
+            'overdueTasks',
+            'overdueCount',
             'taskFilter',
             'modules',
             'incidents',
             'allUsers',
-            'recurringTasks'
+            'recurringTasks',
+            'trashedTasks',
+            'trashedTasksCount',
+            'allTrashCount',
+            'trashFilter'
         ));
 
     }
