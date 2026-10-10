@@ -88,11 +88,20 @@
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
         .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
 
-        /* Collapsible Sidebar Styles */
+        /* Collapsible Sidebar Styles & Permanent Dark Theme */
         #sidebar {
+            background-color: #0b0f19 !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: #cbd5e1 !important;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                         margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             will-change: transform, margin-left;
+        }
+
+        #sidebar .border-b,
+        #sidebar .border-t,
+        #sidebar .border-r {
+            border-color: rgba(255, 255, 255, 0.1) !important;
         }
 
         @media (min-width: 768px) {
@@ -170,9 +179,63 @@
                 min-height: 48px !important;
             }
         }
+
+        /* =========================================================================
+           THEME UNIFICATION: modoclaro.png & modooscuro.jpeg
+           ========================================================================= */
+        /* Canvas workspace backgrounds */
+        body {
+            background-color: #B3B3B3;
+        }
+        .dark body {
+            background-color: #0b0f19;
+        }
+
+        /* Dark Mode: elevated dark slate surfaces and crisp, clearly noticeable borders */
+        .dark .bg-slate-900,
+        .dark .dark\:bg-slate-900 {
+            background-color: #121826 !important;
+        }
+        .dark .bg-slate-950,
+        .dark .dark\:bg-slate-950 {
+            background-color: #0b0f19 !important;
+        }
+        .dark .border-slate-800,
+        .dark [class*="dark:border-slate-800"],
+        .dark [class*="dark:border-slate-700"] {
+            border-color: rgba(255, 255, 255, 0.28) !important;
+        }
+
+        @media (min-width: 1024px) {
+            .dark #kpi-stats-grid > div,
+            .dark .lg\:col-span-8 > div,
+            .dark .lg\:col-span-4 > div,
+            .dark [data-kanban-col],
+            .dark .kanban-card,
+            .dark .dashboard-card,
+            .dark .stats-card {
+                border-color: rgba(255, 255, 255, 0.28) !important;
+            }
+        }
+
+        /* Header / View counter badges: white circle with dark numbers in both modes */
+        .tab-counter-badge,
+        .header-counter-circle {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid rgba(15, 23, 42, 0.12) !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+        }
+        .dark .tab-counter-badge,
+        .dark .header-counter-circle {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+        }
     </style>
 </head>
-<body class="h-full min-h-screen md:h-full font-sans antialiased text-slate-800 dark:text-slate-100 flex flex-col md:flex-row overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+<body class="h-full min-h-screen md:h-full font-sans antialiased text-slate-800 dark:text-slate-100 flex flex-col md:flex-row overflow-hidden bg-[#B3B3B3] dark:bg-[#0b0f19] transition-colors duration-200">
 
     <!-- Flash Notifications -->
     <div id="toast-container" class="fixed top-4 left-4 sm:left-auto right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">

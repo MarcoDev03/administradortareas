@@ -18,7 +18,7 @@ class TaskController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['required', 'string', 'in:no_iniciado,en_proceso,en_revision,rechazado,finalizado'],
-            'priority' => ['required', 'string', 'in:baja,media,alta,urgente'],
+            'priority' => ['required', 'string', 'in:baja,media,alta'],
             'start_date' => ['nullable', 'date'],
             'start_time' => ['nullable'],
             'end_date' => ['nullable', 'date'],
@@ -130,7 +130,7 @@ class TaskController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['required', 'string', 'in:no_iniciado,en_proceso,en_revision,rechazado,finalizado'],
-            'priority' => ['required', 'string', 'in:baja,media,alta,urgente'],
+            'priority' => ['required', 'string', 'in:baja,media,alta'],
             'start_date' => ['nullable', 'date'],
             'start_time' => ['nullable'],
             'end_date' => ['nullable', 'date'],
@@ -144,6 +144,16 @@ class TaskController extends Controller
             'subtasks.*.status' => ['nullable', 'string', 'in:no_iniciado,finalizado'],
             'subtasks.*.id' => ['nullable', 'integer'],
         ]);
+
+        $user = Auth::user();
+        if ($task->needs_review && !$user->hasFullAccess()) {
+            if ($task->status === 'en_revision' && $request->status !== 'en_revision') {
+                return back()->with('error', 'La tarea se encuentra en revisión y solo un administrador autorizado puede aprobarla o rechazarla.');
+            }
+            if (in_array($request->status, ['finalizado', 'rechazado'])) {
+                return back()->with('error', 'Solo Admin o Desarrollador pueden aprobar o rechazar esta tarea.');
+            }
+        }
 
         DB::transaction(function () use ($request, $task) {
             $newStatus = $request->status;
@@ -224,11 +234,20 @@ class TaskController extends Controller
         $newStatus = $request->status;
 
         // Reglas de revisión según rol
-        if ($task->needs_review && in_array($newStatus, ['finalizado', 'rechazado']) && !$user->hasFullAccess()) {
-            if ($request->wantsJson()) {
-                return response()->json(['error' => 'Solo Admin o Desarrollador pueden aprobar o rechazar esta tarea.'], 403);
+        if ($task->needs_review && !$user->hasFullAccess()) {
+            if ($task->status === 'en_revision' && $newStatus !== 'en_revision') {
+                if ($request->wantsJson()) {
+                    return response()->json(['error' => 'La tarea se encuentra en revisión y solo un administrador autorizado puede aprobarla o rechazarla.'], 403);
+                }
+                return back()->with('error', 'La tarea se encuentra en revisión y solo un administrador autorizado puede aprobarla o rechazarla.');
             }
-            return back()->with('error', 'Solo Admin o Desarrollador pueden aprobar o rechazar esta tarea.');
+
+            if (in_array($newStatus, ['finalizado', 'rechazado'])) {
+                if ($request->wantsJson()) {
+                    return response()->json(['error' => 'Solo Admin o Desarrollador pueden aprobar o rechazar esta tarea.'], 403);
+                }
+                return back()->with('error', 'Solo Admin o Desarrollador pueden aprobar o rechazar esta tarea.');
+            }
         }
 
         $completedAt = $task->completed_at;

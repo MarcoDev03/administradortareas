@@ -10,7 +10,7 @@
  * 4. API/JSON calls -> Network Only.
  */
 
-const CACHE_VERSION = 'v1.0.2';
+const CACHE_VERSION = 'v1.0.3';
 const STATIC_CACHE_NAME = 'negociomanager-static-' + CACHE_VERSION;
 const OFFLINE_CACHE_NAME = 'negociomanager-offline-' + CACHE_VERSION;
 
@@ -18,6 +18,7 @@ const CORE_STATIC_ASSETS = [
     '/offline.html',
     '/manifest.json',
     '/favicon.ico',
+    '/icons/iconoround.png',
     '/icons/icon-72x72.png',
     '/icons/icon-96x96.png',
     '/icons/icon-128x128.png',

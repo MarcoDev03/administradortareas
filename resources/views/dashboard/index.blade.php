@@ -6,13 +6,63 @@
 @php
     $overdueTasks = $overdueTasks ?? ($tasks ? $tasks->filter(fn($t) => $t->isOverdue()) : collect());
     $overdueCount = $overdueCount ?? $overdueTasks->count();
+    $estadoColores = $estadoColores ?? [
+        'no_iniciado' => '#64748b',
+        'en_proceso'  => '#3b82f6',
+        'en_revision' => '#f59e0b',
+        'rechazado'   => '#ef4444',
+        'finalizado'  => '#10b981',
+    ];
+    $estadoIconos = $estadoIconos ?? [];
+    if (isset($estadosConfig) && $estadosConfig->count() > 0) {
+        $quickStatusList = $estadosConfig->map(function($item) {
+            $key = $item->clave ?: \Illuminate\Support\Str::slug($item->nombre, '_');
+            return [
+                'id' => $key,
+                'title' => $item->nombre,
+                'ruta_icono' => $item->ruta_icono,
+                'color' => $item->color,
+            ];
+        })->toArray();
+    } else {
+        $quickStatusList = [
+            ['id' => 'no_iniciado', 'title' => 'No Iniciado', 'ruta_icono' => $estadoIconos['no_iniciado'] ?? null, 'color' => $estadoColores['no_iniciado'] ?? '#64748b'],
+            ['id' => 'en_proceso',  'title' => 'En Proceso',  'ruta_icono' => $estadoIconos['en_proceso'] ?? null,  'color' => $estadoColores['en_proceso'] ?? '#3b82f6'],
+            ['id' => 'en_revision', 'title' => 'En Revisión', 'ruta_icono' => $estadoIconos['en_revision'] ?? null, 'color' => $estadoColores['en_revision'] ?? '#f59e0b'],
+            ['id' => 'rechazado',   'title' => 'Rechazado',   'ruta_icono' => $estadoIconos['rechazado'] ?? null,   'color' => $estadoColores['rechazado'] ?? '#ef4444'],
+            ['id' => 'finalizado',  'title' => 'Finalizado',  'ruta_icono' => $estadoIconos['finalizado'] ?? null,  'color' => $estadoColores['finalizado'] ?? '#10b981'],
+        ];
+    }
+
+    $prioridadColores = $prioridadColores ?? [
+        'baja'  => '#64748b',
+        'media' => '#f59e0b',
+        'alta'  => '#ef4444',
+    ];
+    $prioridadNombres = $prioridadNombres ?? [
+        'baja'  => 'Baja',
+        'media' => 'Media',
+        'alta'  => 'Alta',
+    ];
+    $periodicidadColores = $periodicidadColores ?? [
+        'diaria'  => '#06b6d4',
+        'semanal' => '#3b82f6',
+        'mensual' => '#8b5cf6',
+        'anual'   => '#10b981',
+    ];
+    $periodicidadNombres = $periodicidadNombres ?? [
+        'diaria'  => 'Diaria',
+        'semanal' => 'Semanal',
+        'mensual' => 'Mensual',
+        'anual'   => 'Anual',
+    ];
 @endphp
 
 <!-- Mobile Sidebar Backdrop -->
 <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-30 hidden md:hidden transition-opacity"></div>
 
 <!-- Sidebar Navigation -->
-<aside id="sidebar" class="sidebar-collapsed fixed md:static inset-y-0 left-0 z-40 w-72 max-w-[85vw] bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-300 border-r border-slate-200 dark:border-slate-800/80 flex flex-col transition-all duration-300 transform -translate-x-full md:translate-x-0 shrink-0">
+<aside id="sidebar" class="sidebar-collapsed fixed md:static inset-y-0 left-0 z-40 w-72 max-w-[85vw] bg-[#0b0f19] text-slate-300 border-r border-slate-800/80 flex flex-col transition-all duration-300 transform -translate-x-full md:translate-x-0 shrink-0">
     <!-- Inicialización inmediata para evitar parpadeo (Flicker) -->
     <script>
         (function() {
@@ -28,28 +78,28 @@
         })();
     </script>
     <!-- Header App Logo -->
-    <div class="p-4 sm:p-5 border-b border-slate-200/80 dark:border-slate-800/90 flex items-center justify-between">
+    <div class="p-4 sm:p-5 border-b border-slate-800/90 flex items-center justify-between">
         <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-[#0f172a] border border-slate-700/60 flex items-center justify-center shrink-0 shadow-md p-1">
+            <div class="w-10 h-10 rounded-xl bg-[#0014C6] border border-slate-700/60 flex items-center justify-center shrink-0 shadow-md p-1">
                 <img src="{{ asset('icons/iconoround.png') }}" alt="NegocioManager" class="w-8 h-8 object-contain">
             </div>
             <div>
-                <h1 class="font-bold text-base sm:text-lg text-slate-900 dark:text-white tracking-tight leading-tight">NegocioManager</h1>
+                <h1 class="font-bold text-base sm:text-lg text-white tracking-tight leading-tight">NegocioManager</h1>
                 <!--<span class="text-[10px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Panel Central</span> -->
             </div>
         </div>
-        <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-slate-700 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition" aria-label="Cerrar menú">
+        <button onclick="toggleSidebar()" class="md:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition" aria-label="Cerrar menú">
             <i data-lucide="x" class="w-5 h-5"></i>
         </button>
     </div>
 
     <!-- Quick Theme Toggle in Sidebar (Moved below NegocioManager / Panel Central) -->
-    <div class="px-3 sm:px-4 py-2.5 border-b border-slate-200/70 dark:border-slate-800/80">
-        <button type="button" onclick="toggleTheme()" class="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-900/90 dark:hover:bg-slate-800/90 border border-slate-200/90 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-amber-400 transition text-xs flex items-center justify-between shadow-2xs">
+    <div class="px-3 sm:px-4 py-2.5 border-b border-slate-800/80">
+        <button type="button" onclick="toggleTheme()" class="w-full py-2 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 text-slate-400 hover:text-amber-400 transition text-xs flex items-center justify-between shadow-2xs">
             <span class="font-medium">Cambiar Tema</span>
             <div class="flex items-center">
-                <span class="theme-icon-moon"><i data-lucide="moon" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i></span>
-                <span class="theme-icon-sun hidden"><i data-lucide="sun" class="w-4 h-4 text-amber-500 dark:text-amber-400"></i></span>
+                <span class="theme-icon-moon"><i data-lucide="moon" class="w-4 h-4 text-blue-400"></i></span>
+                <span class="theme-icon-sun hidden"><i data-lucide="sun" class="w-4 h-4 text-amber-400"></i></span>
             </div>
             <!-- Texto 'Claro / Oscuro' ocultado para evitar redundancia -->
             <!-- <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Claro / Oscuro</span> -->
@@ -60,7 +110,7 @@
     @if($user->hasFullAccess())
     <div class="p-3 sm:p-4 pb-2">
         <button onclick="openProjectModal()"
-            class="w-full py-2.5 px-4 bg-[#0f172a] hover:bg-slate-800 text-white font-medium rounded-xl flex items-center justify-center space-x-2 transition-all shadow-md shadow-slate-900/20 active:scale-95 text-xs sm:text-sm">
+            class="w-full py-2.5 px-4 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl flex items-center justify-center space-x-2 transition-all shadow-md shadow-indigo-900/20 active:scale-95 text-xs sm:text-sm">
             <i data-lucide="plus-circle" class="w-4 h-4"></i>
             <span>Nuevo Proyecto</span>
         </button>
@@ -69,17 +119,17 @@
 
     <!-- Current User Info Card -->
     <div class="px-3 sm:px-4 py-2">
-        <div class="flex items-center justify-between bg-slate-100/80 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 rounded-xl px-3 py-2.5">
+        <div class="flex items-center justify-between bg-slate-800/70 border border-slate-700/60 rounded-xl px-3 py-2.5">
             <div class="flex items-center gap-2.5 min-w-0">
-                <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/60 text-blue-600 dark:text-blue-300 font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                <div class="w-8 h-8 rounded-lg bg-blue-950/60 border border-blue-800/60 text-blue-300 font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
                     {{ $user->initials }}
                 </div>
                 <div class="min-w-0">
-                    <p class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate leading-tight">{{ $user->name }}</p>
-                    <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 block truncate">{{ $user->role }}</span>
+                    <p class="text-xs font-semibold text-slate-200 truncate leading-tight">{{ $user->name }}</p>
+                    <span class="text-[10px] font-medium text-slate-400 block truncate">{{ $user->role }}</span>
                 </div>
             </div>
-            <span class="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 shadow-xs" title="En línea"></span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-xs" title="En línea"></span>
         </div>
     </div>
 
@@ -87,13 +137,13 @@
     <div class="px-3 sm:px-4 py-2 grid grid-cols-2 gap-2">
         <a href="{{ route('dashboard', ['project_id' => $activeProject ? $activeProject->id : '', 'view' => $activeView]) }}"
             class="py-2 px-2.5 rounded-xl text-xs font-medium flex items-center justify-center space-x-1.5 transition
-            {{ request()->has('project_id') ? 'bg-[#0f172a] text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800/70 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-transparent' }}">
+            {{ request()->has('project_id') ? 'bg-[#0f172a] text-white shadow-sm border border-slate-700/60' : 'bg-slate-800/70 text-slate-400 hover:text-slate-200 hover:bg-slate-700/80 border border-transparent' }}">
             <i data-lucide="folder-kanban" class="w-3.5 h-3.5"></i>
             <span>Proyectos</span>
         </a>
         <a href="{{ route('dashboard', ['view' => 'resumen']) }}"
             class="py-2 px-2.5 rounded-xl text-xs font-medium flex items-center justify-center space-x-1.5 transition
-            {{ !request()->has('project_id') ? 'bg-[#0f172a] text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800/70 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-transparent' }}">
+            {{ !request()->has('project_id') ? 'bg-[#0f172a] text-white shadow-sm border border-slate-700/60' : 'bg-slate-800/70 text-slate-400 hover:text-slate-200 hover:bg-slate-700/80 border border-transparent' }}">
             <i data-lucide="layers" class="w-3.5 h-3.5"></i>
             <span>General</span>
         </a>
@@ -101,63 +151,63 @@
 
     <!-- Projects List -->
     <div class="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 no-scrollbar">
-        <div class="px-3 py-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-between">
+        <div class="px-3 py-1 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
             <span>{{ $user->isHelper() ? 'Proyectos Asignados' : 'Tus Proyectos' }}</span>
-            <span class="px-1.5 py-0.5 rounded-full bg-slate-200/80 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-400 font-semibold">{{ $visibleProjects->count() }}</span>
+            <span class="px-1.5 py-0.5 rounded-full bg-slate-800 text-[10px] text-slate-400 font-semibold">{{ $visibleProjects->count() }}</span>
         </div>
 
         @if($visibleProjects->isEmpty())
-            <div class="text-center py-8 px-4 text-slate-400 dark:text-slate-500 text-xs">
+            <div class="text-center py-8 px-4 text-slate-500 text-xs">
                 {{ $user->isHelper() ? 'No tienes tareas asignadas en ningún proyecto todavía.' : 'No tienes proyectos guardados. ¡Crea uno para empezar!' }}
             </div>
         @else
             @foreach($visibleProjects as $proj)
                 @php $isActive = $activeProject && $activeProject->id == $proj->id; @endphp
-                <div class="rounded-xl {{ $isActive ? 'bg-blue-50/80 dark:bg-slate-800/90 border border-blue-200 dark:border-blue-700/50 shadow-xs' : 'bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800/70 hover:bg-slate-100 dark:hover:bg-slate-800/60' }} overflow-hidden transition">
+                <div class="rounded-xl {{ $isActive ? 'bg-slate-800/90 border border-blue-700/50 shadow-xs' : 'bg-slate-800/40 border border-slate-800/70 hover:bg-slate-800/60' }} overflow-hidden transition">
                     <div class="group flex items-center justify-between px-3 py-2.5 text-xs sm:text-sm font-medium
-                        {{ $isActive ? 'text-blue-700 dark:text-blue-300 font-semibold border-l-4 border-blue-600 dark:border-blue-500 pl-2' : 'text-slate-700 dark:text-slate-300' }}">
+                        {{ $isActive ? 'text-blue-300 font-semibold border-l-4 border-blue-500 pl-2' : 'text-slate-300' }}">
                         <a href="{{ route('dashboard', ['project_id' => $proj->id, 'view' => $activeView]) }}" class="flex items-center space-x-2.5 truncate flex-1 min-w-0">
-                            <i data-lucide="folder" class="w-4 h-4 shrink-0 {{ $isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400' }}"></i>
+                            <i data-lucide="folder" class="w-4 h-4 shrink-0 {{ $isActive ? 'text-blue-400' : 'text-slate-400' }}"></i>
                             <span class="truncate">{{ $proj->name }}</span>
                         </a>
                         <div class="flex items-center space-x-1 shrink-0">
                             @if($user->hasFullAccess())
-                                <button title="Agregar Módulo" onclick="openModuleModal({{ $proj->id }})" class="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-300 hover:bg-slate-200/70 dark:hover:bg-slate-700 rounded-lg transition">
+                                <button title="Agregar Módulo" onclick="openModuleModal({{ $proj->id }})" class="p-1 text-slate-400 hover:text-blue-300 hover:bg-slate-700 rounded-lg transition">
                                     <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
                                 </button>
-                                <button title="Editar proyecto" onclick='openProjectModal(@json($proj))' class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-700 rounded-lg transition">
+                                <button title="Editar proyecto" onclick='openProjectModal(@json($proj))' class="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition">
                                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                 </button>
                             @endif
-                            <button onclick="toggleProjectAccordion({{ $proj->id }})" class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-lg transition" aria-label="Expandir módulos">
+                            <button onclick="toggleProjectAccordion({{ $proj->id }})" class="p-1 text-slate-400 hover:text-white rounded-lg transition" aria-label="Expandir módulos">
                                 <i data-lucide="chevron-down" id="acc-icon-{{ $proj->id }}" class="w-4 h-4 transition-transform duration-200 {{ $isActive ? '' : '-rotate-90' }}"></i>
                             </button>
                         </div>
                     </div>
 
                     <!-- Modules Accordion -->
-                    <div id="acc-content-{{ $proj->id }}" class="{{ $isActive ? '' : 'hidden' }} pl-5 pr-2 py-1.5 space-y-1 bg-slate-100/80 dark:bg-slate-950/40 border-t border-slate-200/80 dark:border-slate-800/70 text-xs">
+                    <div id="acc-content-{{ $proj->id }}" class="{{ $isActive ? '' : 'hidden' }} pl-5 pr-2 py-1.5 space-y-1 bg-slate-950/40 border-t border-slate-800/70 text-xs">
                         <a href="{{ route('dashboard', ['project_id' => $proj->id, 'module_id' => 'all', 'view' => $activeView]) }}"
                             class="flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition
-                            {{ $isActive && $activeModuleId === 'all' ? 'bg-blue-100/80 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60' }}">
+                            {{ $isActive && $activeModuleId === 'all' ? 'bg-blue-500/20 text-blue-300 font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60' }}">
                             <div class="flex items-center space-x-2">
                                 <i data-lucide="boxes" class="w-3.5 h-3.5 text-slate-400"></i>
                                 <span>Todos los módulos</span>
                             </div>
-                            <span class="text-[10px] bg-slate-200 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 px-1.5 py-0.5 rounded-full font-medium">{{ $proj->tasks->count() }}</span>
+                            <span class="text-[10px] bg-slate-800/80 text-slate-400 px-1.5 py-0.5 rounded-full font-medium">{{ $proj->tasks->count() }}</span>
                         </a>
 
                         @foreach($proj->modules as $mod)
                             <div class="group flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition
-                                {{ $isActive && $activeModuleId == $mod->id ? 'bg-blue-100/80 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 font-semibold' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60' }}">
+                                {{ $isActive && $activeModuleId == $mod->id ? 'bg-blue-500/20 text-blue-300 font-semibold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60' }}">
                                 <a href="{{ route('dashboard', ['project_id' => $proj->id, 'module_id' => $mod->id, 'view' => $activeView]) }}" class="flex items-center space-x-2 truncate flex-1">
                                     <i data-lucide="box" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
                                     <span class="truncate">{{ $mod->name }}</span>
                                 </a>
                                 <div class="flex items-center space-x-1 shrink-0">
-                                    <span class="text-[10px] bg-slate-200 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 px-1.5 py-0.5 rounded-full font-medium">{{ $mod->tasks->count() }}</span>
+                                    <span class="text-[10px] bg-slate-800/80 text-slate-400 px-1.5 py-0.5 rounded-full font-medium">{{ $mod->tasks->count() }}</span>
                                     @if($user->hasFullAccess())
-                                        <button title="Editar módulo" onclick="openModuleModal({{ $proj->id }}, {{ json_encode($mod) }})" class="p-1 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-700 rounded transition">
+                                        <button title="Editar módulo" onclick="openModuleModal({{ $proj->id }}, {{ json_encode($mod) }})" class="p-1 opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition">
                                             <i data-lucide="pencil" class="w-3 h-3"></i>
                                         </button>
                                     @endif
@@ -171,14 +221,14 @@
     </div>
 
     <!-- Sidebar Footer -->
-    <div class="p-3.5 border-t border-slate-200/80 dark:border-slate-800/90 text-xs text-slate-500 dark:text-slate-400 flex flex-col items-center space-y-2 shrink-0">
+    <div class="p-3.5 border-t border-slate-800/90 text-xs text-slate-400 flex flex-col items-center space-y-2 shrink-0">
         <!-- PWA Install Button -->
         <!-- <button id="pwa-install-btn" onclick="triggerPWAInstall()" class="hidden text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-white transition text-xs font-semibold flex items-center space-x-2 py-2 px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 border border-indigo-200 dark:border-indigo-500/40 w-full justify-center shadow-xs">
             <i data-lucide="download" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></i>
             <span>Instalar Aplicación PWA</span>
         </button> -->
 
-        <a href="{{ route('config.index') }}" class="w-full py-1.5 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition text-xs flex items-center justify-between">
+        <a href="{{ route('config.index') }}" onclick="saveSettingsReturnView()" class="w-full py-1.5 px-3 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-indigo-300 transition text-xs flex items-center justify-between">
             <div class="flex items-center space-x-2">
                 <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
                 <span>Configuración</span>
@@ -187,28 +237,28 @@
         </a>
 
         @if($user->hasFullAccess())
-            <button onclick="openUsersListModal()" class="w-full py-1.5 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition text-xs flex items-center justify-between">
+            <button onclick="openUsersListModal()" class="w-full py-1.5 px-3 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-indigo-300 transition text-xs flex items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
                     <span>Gestión de Usuarios</span>
                 </div>
-                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-200/90 dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-300">{{ $allUsers->count() }}</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full tab-counter-badge font-bold">{{ $allUsers->count() }}</span>
             </button>
         @endif
     </div>
 </aside>
 
 <!-- Main Content Workspace -->
-<main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+<main class="flex-1 flex flex-col h-full overflow-hidden bg-[#B3B3B3] dark:bg-[#0b0f19] transition-colors duration-200">
 
     <!-- Top Workspace Navbar -->
-    <header class="bg-[#0f172a] lg:bg-white/95 lg:dark:bg-slate-900/95 backdrop-blur-md border-b-0 lg:border-b lg:border-slate-200/80 lg:dark:border-slate-800/80 px-3 sm:px-6 flex flex-col lg:flex-row lg:items-stretch shadow-soft shrink-0 z-20">
+    <header class="bg-[#0f172a] lg:bg-[#B3B3B3] lg:dark:bg-[#0b0f19] border-b border-slate-700/60 lg:border-black/15 lg:dark:border-slate-800/80 px-3 sm:px-6 flex flex-col lg:flex-row lg:items-stretch shadow-md lg:shadow-none shrink-0 z-20 lg:min-h-[72px]">
 
         <!-- Top row on mobile / Left column on desktop -->
-        <div class="flex items-center justify-between lg:justify-start lg:flex-none py-3.5 sm:py-4 lg:py-3.5 min-h-[58px] lg:min-h-0 gap-2 min-w-0">
+        <div class="flex items-center justify-between lg:justify-start lg:flex-none py-3.5 sm:py-4 lg:py-0 min-h-[58px] lg:min-h-[72px] gap-2 min-w-0">
             <!-- Mobile hamburger + Project title -->
             <div class="flex items-center space-x-2.5 sm:space-x-4 min-w-0">
-                <button id="sidebar-toggle-btn" onclick="toggleSidebar()" class="text-white hover:text-slate-200 lg:text-slate-600 lg:dark:text-slate-300 lg:hover:text-slate-900 lg:dark:hover:text-white p-1.5 -ml-1 rounded-xl hover:bg-white/10 lg:hover:bg-slate-100 lg:dark:hover:bg-slate-800 focus:outline-none transition shrink-0" aria-label="Alternar menú lateral" title="Alternar menú lateral">
+                <button id="sidebar-toggle-btn" onclick="toggleSidebar()" class="text-white hover:text-slate-200 lg:text-black lg:dark:text-slate-300 lg:hover:text-black lg:dark:hover:text-white p-1.5 -ml-1 rounded-xl hover:bg-white/10 lg:hover:bg-black/10 lg:dark:hover:bg-slate-800 focus:outline-none transition shrink-0" aria-label="Alternar menú lateral" title="Alternar menú lateral">
                     <i data-lucide="menu" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                 </button>
                 <div class="min-w-0">
@@ -216,25 +266,19 @@
                         <h2 class="text-sm font-bold text-white truncate max-w-[200px] tracking-tight lg:hidden">
                             {{ $activeProject ? $activeProject->name : 'Selecciona un Proyecto' }}
                         </h2>
-                        <h2 class="hidden lg:block text-sm sm:text-lg font-bold text-slate-900 dark:text-white truncate max-w-[200px] sm:max-w-xs md:max-w-md tracking-tight">
+                        <h2 class="hidden lg:block text-sm sm:text-lg font-bold text-black dark:text-white truncate max-w-[200px] sm:max-w-xs md:max-w-md tracking-tight">
                             {{ $activeProject ? $activeProject->name : 'Selecciona un Proyecto' }}
                         </h2>
                         @if($activeProject && $activeModuleId && $activeModuleId !== 'all')
                             @php $activeMod = $activeProject->modules->firstWhere('id', $activeModuleId); @endphp
                             @if($activeMod)
-                                <span class="hidden lg:flex text-[11px] bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/70 font-semibold px-2.5 py-0.5 rounded-full items-center space-x-1 shrink-0">
-                                    <i data-lucide="box" class="w-3 h-3"></i>
+                                <span class="hidden lg:flex text-[11px] bg-white/70 dark:bg-slate-800 text-black dark:text-slate-200 border border-black/15 dark:border-slate-700 font-semibold px-2.5 py-0.5 rounded-full items-center space-x-1 shrink-0">
+                                    <i data-lucide="box" class="w-3 h-3 text-indigo-700 dark:text-blue-400"></i>
                                     <span class="truncate max-w-[120px]">{{ $activeMod->name }}</span>
                                 </span>
                             @endif
                         @endif
                     </div>
-                    @if($activeProject)
-                        <!--<p class="hidden lg:flex text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate items-center gap-1.5">
-                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                            <span>{{ $todayTasks->count() }} tarea(s) para hoy &bull; {{ $tasks->count() }} en total</span>
-                        </p>-->
-                    @endif
                 </div>
             </div>
 
@@ -257,28 +301,28 @@
                     @if($activeView === 'resumen' || $activeView === 'kanban' || $activeView === 'calendario')
                         @if(!$user->isHelper())
                             <button onclick="openTaskModal()"
-                                class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95" title="Agregar Tarea">
+                                class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80" title="Agregar Tarea">
                                 <i data-lucide="plus-circle" class="w-4 h-4"></i>
                                 <span class="hidden sm:inline">Tarea</span>
                             </button>
                         @endif
                     @elseif($activeView === 'incidencias')
                         <button onclick="openIncidentModal()"
-                            class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-red-600 hover:bg-red-500 text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95" title="Reportar Incidencia">
+                            class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80" title="Reportar Incidencia">
                             <i data-lucide="alert-circle" class="w-4 h-4"></i>
                             <span class="hidden sm:inline">Reportar</span>
                         </button>
                     @elseif($activeView === 'periodicas')
                         @if(!$user->isHelper())
                             <button onclick="openRecurringTaskModal()"
-                                class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95" title="Nueva Tarea Periódica">
+                                class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80" title="Nueva Tarea Periódica">
                                 <i data-lucide="plus-circle" class="w-4 h-4"></i>
                                 <span class="hidden sm:inline">Nueva</span>
                             </button>
                         @endif
                     @elseif($activeView === 'enlaces' && !$user->isHelper())
                         <button onclick='openProjectModal(@json($activeProject->load("links.assignedUsers")))'
-                            class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95" title="Gestionar Enlaces">
+                            class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80" title="Gestionar Enlaces">
                             <i data-lucide="link" class="w-4 h-4"></i>
                             <span class="hidden sm:inline">Enlaces</span>
                         </button>
@@ -296,36 +340,32 @@
 
         <!-- Desktop Center: Tab Navigation (lg+) -->
         @if($activeProject)
-        <nav class="hidden lg:flex items-stretch overflow-x-auto no-scrollbar lg:border-t-0 lg:mx-0 lg:px-0 flex-nowrap shrink-0 gap-1 sm:gap-2 lg:ml-4">
+        <nav class="hidden lg:flex items-stretch overflow-x-auto lg:overflow-visible no-scrollbar lg:border-t-0 lg:mx-0 lg:px-0 flex-nowrap shrink-0 gap-1 sm:gap-2 lg:ml-4 lg:min-h-[72px]">
             <!-- 1. Tab Resumen / Dashboard -->
             <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'resumen']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'resumen' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                {{ $activeView === 'resumen' ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
                 <span>Resumen</span>
             </a>
 
             <!-- 2. Tab Calendario -->
             <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'calendario']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'calendario' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-                <i data-lucide="calendar-days" class="w-4 h-4"></i>
+                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                {{ $activeView === 'calendario' ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
                 <span>Calendario</span>
             </a>
 
-            <!-- 3. Tab Kanban -->
+            <!-- 3. Tab Tablero Kanban -->
             <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'kanban']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'kanban' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-                <i data-lucide="kanban" class="w-4 h-4"></i>
+                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                {{ $activeView === 'kanban' ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
                 <span>Tablero Kanban</span>
             </a>
 
             <!-- 4. Tab Enlaces -->
             <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'enlaces']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'enlaces' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-                <i data-lucide="link" class="w-4 h-4"></i>
+                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                {{ $activeView === 'enlaces' ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
                 <span>Enlaces</span>
                 @php
                     $userLinkCount = $user->isHelper()
@@ -333,7 +373,7 @@
                         : $activeProject->links->count();
                 @endphp
                 @if($userLinkCount > 0)
-                    <span class="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded-full font-bold">
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
                         {{ $userLinkCount }}
                     </span>
                 @endif
@@ -341,12 +381,11 @@
 
             <!-- 5. Tab Incidencias -->
             <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'incidencias']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'incidencias' ? 'border-red-600 text-red-600 dark:text-red-400 dark:border-red-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-                <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                {{ $activeView === 'incidencias' ? 'border-red-600 text-red-700 dark:border-red-400 dark:text-red-300' : 'border-transparent text-black hover:text-red-700 dark:text-slate-400 dark:hover:text-white' }}">
                 <span>Incidencias</span>
                 @if($incidents->count() > 0)
-                    <span class="text-[10px] bg-red-100 dark:bg-red-950/70 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded-full font-bold">
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
                         {{ $incidents->count() }}
                     </span>
                 @endif
@@ -355,12 +394,11 @@
             <!-- 6. Tab Tareas Periódicas (Admin/Dev) -->
             @if($user->isAdmin())
             <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'periodicas']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'periodicas' ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-                <i data-lucide="repeat" class="w-4 h-4"></i>
+                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                {{ $activeView === 'periodicas' ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
                 <span>Periódicas</span>
                 @if($recurringTasks->count() > 0)
-                    <span class="text-[10px] bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded-full font-bold">
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
                         {{ $recurringTasks->count() }}
                     </span>
                 @endif
@@ -369,133 +407,151 @@
 
             <!-- 7. Tab Papelera -->
             <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'papelera']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'papelera' ? 'border-red-600 text-red-600 dark:text-red-400 dark:border-red-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                {{ $activeView === 'papelera' ? 'border-red-600 text-red-700 dark:border-red-400 dark:text-red-300' : 'border-transparent text-black hover:text-red-700 dark:text-slate-400 dark:hover:text-white' }}">
                 <span>Papelera</span>
                 @if($trashedTasksCount > 0)
-                    <span class="text-[10px] bg-red-100 dark:bg-red-950/70 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded-full font-bold">
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
                         {{ $trashedTasksCount }}
                     </span>
                 @endif
             </a>
+
+            <!-- 8. Menú Desplegable «Más» -->
+            @php
+                $isMoreActive = in_array($activeView, ['checklist', 'lista_tareas']);
+            @endphp
+            <div class="relative flex items-stretch shrink-0" id="desktop-more-menu-container">
+                <button type="button" onclick="toggleDesktopMoreMenu()" id="btn-desktop-more"
+                    class="flex items-center space-x-1 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $isMoreActive ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}"
+                    aria-expanded="false" aria-haspopup="true" title="Más opciones">
+                    <span>Más</span>
+                    <i data-lucide="chevron-down" id="desktop-more-chevron" class="w-3.5 h-3.5 transition-transform duration-200"></i>
+                </button>
+
+                <!-- Menú Vertical Desplegable (Con soporte de desplazamiento vertical para futuras vistas) -->
+                <div id="desktop-more-dropdown"
+                    class="hidden absolute top-full left-0 mt-1 min-w-[210px] max-h-[60vh] overflow-y-auto rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-1.5 z-50 transition-all">
+                    
+                    <!-- Opción: CheckList (Matriz mensual con checks) -->
+                    <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'checklist']) }}"
+                        onclick="closeDesktopMoreMenu()"
+                        class="flex items-center px-3.5 py-2.5 text-xs lg:text-sm transition font-bold border-l-2
+                        {{ $isMoreActive ? 'border-indigo-600 dark:border-indigo-400 bg-white hover:bg-white text-black dark:bg-indigo-600 dark:hover:bg-indigo-600 dark:text-white' : 'border-transparent dark:border-transparent bg-white hover:bg-white text-black dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white' }}">
+                        <span>CheckList</span>
+                    </a>
+
+                    <!-- Espacio preparado para incorporar futuras vistas adicionales aquí -->
+                </div>
+            </div>
         </nav>
 
         <!-- Mobile Contextual Sub-navigation (Reemplaza accesos repetidos por subapartados de la sección activa) -->
-        <nav class="lg:hidden flex items-stretch overflow-x-auto no-scrollbar border-t border-slate-100 dark:border-slate-800/80 -mx-3 px-3 sm:-mx-6 sm:px-6 flex-nowrap shrink-0 gap-1 sm:gap-2 py-1 bg-white dark:bg-slate-950">
+        <nav class="lg:hidden flex items-stretch overflow-x-auto no-scrollbar border-t border-slate-800 -mx-3 px-3 sm:-mx-6 sm:px-6 flex-nowrap shrink-0 gap-1 sm:gap-2 py-1 bg-[#0f172a] text-slate-300">
             @if($activeView === 'resumen')
                 <!-- Subnavegación Contextual: Resumen -->
                 <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'resumen', 'task_filter' => 'hoy']) }}"
-                    class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                    {{ $taskFilter === 'hoy' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $taskFilter === 'hoy' ? 'border-indigo-400 text-white font-bold' : 'border-transparent text-slate-300 hover:text-white' }}">
                     <span>Tareas de hoy</span>
-                    <span class="text-[10px] px-1.5 py-0.2 rounded-full font-bold {{ $taskFilter === 'hoy' ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $todayTasks->count() }}</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded-full font-bold tab-counter-badge">{{ $todayTasks->count() }}</span>
                 </a>
 
                 <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'resumen', 'task_filter' => 'mes']) }}"
-                    class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                    {{ $taskFilter === 'mes' ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-                    <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
+                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $taskFilter === 'mes' ? 'border-indigo-400 text-white font-bold' : 'border-transparent text-slate-300 hover:text-white' }}">
                     <span>Tareas del mes</span>
-                    <span class="text-[10px] px-1.5 py-0.2 rounded-full font-bold {{ $taskFilter === 'mes' ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $monthTasks->count() }}</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded-full font-bold tab-counter-badge">{{ $monthTasks->count() }}</span>
                 </a>
 
                 <button type="button" onclick="document.getElementById('kpi-stats-grid')?.scrollIntoView({behavior: 'smooth'})"
-                    class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 whitespace-nowrap transition shrink-0">
-                    <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>
+                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-transparent text-slate-300 hover:text-white whitespace-nowrap transition shrink-0">
                     <span>Estadísticas</span>
                 </button>
 
                 @if($overdueCount > 0)
                 <button type="button" onclick="document.getElementById('widget-urgencias')?.scrollIntoView({behavior: 'smooth'})"
-                    class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-transparent text-red-600 dark:text-red-400 whitespace-nowrap transition shrink-0">
-                    <i data-lucide="alert-octagon" class="w-3.5 h-3.5"></i>
+                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-transparent text-red-400 whitespace-nowrap transition shrink-0">
                     <span>Urgencias</span>
-                    <span class="text-[10px] bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 px-1.5 py-0.2 rounded-full font-bold">{{ $overdueCount }}</span>
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $overdueCount }}</span>
                 </button>
                 @endif
 
             @elseif($activeView === 'calendario')
                 <!-- Subnavegación Contextual: Calendario -->
                 <button type="button" id="subnav-cal-btn-calendar" onclick="selectMobileCalView('calendar')"
-                    class="cal-subnav-btn flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-500">
-                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                    class="cal-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-indigo-400 text-white font-bold">
                     <span>Calendario</span>
                 </button>
 
                 <button type="button" id="subnav-cal-btn-list" onclick="selectMobileCalView('list')"
-                    class="cal-subnav-btn flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
-                    <i data-lucide="list-checks" class="w-3.5 h-3.5"></i>
+                    class="cal-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                     <span>Lista de tareas del proyecto</span>
                 </button>
 
                 <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'calendario', 'task_filter' => 'hoy', 'cal_subview' => 'list']) }}"
                     id="subnav-cal-btn-hoy"
-                    class="cal-subnav-btn flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
-                    <i data-lucide="calendar-check" class="w-3.5 h-3.5"></i>
+                    class="cal-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                     <span>Tareas de hoy</span>
-                    <span class="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded-full font-bold {{ $taskFilter === 'hoy' ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300' : '' }}">{{ $todayTasks->count() }}</span>
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $todayTasks->count() }}</span>
                 </a>
 
                 <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'calendario', 'task_filter' => 'mes', 'cal_subview' => 'list']) }}"
                     id="subnav-cal-btn-mes"
-                    class="cal-subnav-btn flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
-                    <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
+                    class="cal-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                     <span>Tareas del mes</span>
-                    <span class="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded-full font-bold {{ $taskFilter === 'mes' ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300' : '' }}">{{ $monthTasks->count() }}</span>
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $monthTasks->count() }}</span>
                 </a>
 
             @elseif($activeView === 'kanban')
                 <!-- Subnavegación Contextual: Tablero Kanban (Estados reales) -->
                 @php
                     $mobileKanbanCols = [
-                        ['id' => 'no_iniciado', 'title' => 'No Iniciado', 'icon' => 'circle', 'badgeBg' => 'bg-slate-200 dark:bg-slate-700', 'badgeText' => 'text-slate-700 dark:text-slate-300'],
-                        ['id' => 'en_proceso', 'title' => 'En Proceso', 'icon' => 'clock', 'badgeBg' => 'bg-amber-100 dark:bg-amber-950/70', 'badgeText' => 'text-amber-800 dark:text-amber-300'],
-                        ['id' => 'en_revision', 'title' => 'En Revisión', 'icon' => 'search', 'badgeBg' => 'bg-purple-100 dark:bg-purple-950/70', 'badgeText' => 'text-purple-800 dark:text-purple-300'],
-                        ['id' => 'rechazado', 'title' => 'Rechazado', 'icon' => 'x-circle', 'badgeBg' => 'bg-red-100 dark:bg-red-950/70', 'badgeText' => 'text-red-800 dark:text-red-300'],
-                        ['id' => 'finalizado', 'title' => 'Finalizado', 'icon' => 'check-circle', 'badgeBg' => 'bg-emerald-100 dark:bg-emerald-950/70', 'badgeText' => 'text-emerald-800 dark:text-emerald-300'],
+                        ['id' => 'no_iniciado', 'title' => 'No Iniciado', 'icon' => 'circle'],
+                        ['id' => 'en_proceso', 'title' => 'En Proceso', 'icon' => 'clock'],
+                        ['id' => 'en_revision', 'title' => 'En Revisión', 'icon' => 'search'],
+                        ['id' => 'rechazado', 'title' => 'Rechazado', 'icon' => 'x-circle'],
+                        ['id' => 'finalizado', 'title' => 'Finalizado', 'icon' => 'check-circle'],
                     ];
                 @endphp
 
                 <button type="button" id="subnav-kanban-btn-todos" onclick="filterMobileKanban('todos')"
-                    class="kanban-subnav-btn flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-500">
-                    <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+                    class="kanban-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-indigo-400 text-white font-bold">
                     <span>Todos</span>
-                    <span class="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded-full font-bold">{{ $filteredTasks->count() }}</span>
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $filteredTasks->count() }}</span>
                 </button>
 
                 @foreach($mobileKanbanCols as $col)
                     @php $colTasksCount = $filteredTasks->where('status', $col['id'])->count(); @endphp
                     <button type="button" id="subnav-kanban-btn-{{ $col['id'] }}" onclick="filterMobileKanban('{{ $col['id'] }}')"
-                        class="kanban-subnav-btn flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
-                        <i data-lucide="{{ $col['icon'] }}" class="w-3.5 h-3.5"></i>
+                        class="kanban-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                         <span>{{ $col['title'] }}</span>
-                        <span class="text-[10px] {{ $col['badgeBg'] }} {{ $col['badgeText'] }} px-1.5 py-0.2 rounded-full font-bold">{{ $colTasksCount }}</span>
+                        <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $colTasksCount }}</span>
                     </button>
                 @endforeach
 
             @elseif($activeView === 'incidencias')
                 <!-- Subnavegación Contextual: Incidencias -->
                 <button type="button" id="subnav-inc-btn-todas" onclick="filterMobileIncidents('todas')"
-                    class="inc-subnav-btn flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-red-600 text-red-600 dark:text-red-400 dark:border-red-500">
+                    class="inc-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-red-400 text-red-300 font-bold">
                     <span>Todas</span>
-                    <span class="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->count() }}</span>
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->count() }}</span>
                 </button>
                 <button type="button" id="subnav-inc-btn-abierta" onclick="filterMobileIncidents('abierta')"
-                    class="inc-subnav-btn flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
+                    class="inc-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                     <span>Abiertas</span>
-                    <span class="text-[10px] bg-red-100 dark:bg-red-950/70 text-red-700 dark:text-red-300 px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'abierta')->count() }}</span>
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'abierta')->count() }}</span>
                 </button>
                 <button type="button" id="subnav-inc-btn-en_proceso" onclick="filterMobileIncidents('en_proceso')"
-                    class="inc-subnav-btn flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
+                    class="inc-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                     <span>En Proceso</span>
-                    <span class="text-[10px] bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'en_proceso')->count() }}</span>
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'en_proceso')->count() }}</span>
                 </button>
                 <button type="button" id="subnav-inc-btn-resuelta" onclick="filterMobileIncidents('resuelta')"
-                    class="inc-subnav-btn flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">
+                    class="inc-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                     <span>Resueltas</span>
-                    <span class="text-[10px] bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'resuelta')->count() }}</span>
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'resuelta')->count() }}</span>
                 </button>
 
             @elseif($activeView === 'enlaces')
@@ -505,82 +561,86 @@
                         ? $activeProject->links->filter(fn($l) => $l->assignedUsers->contains('id', $user->id))->count()
                         : $activeProject->links->count();
                 @endphp
-                <div class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-500 whitespace-nowrap">
-                    <i data-lucide="link" class="w-3.5 h-3.5"></i>
+                <div class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-indigo-400 text-white whitespace-nowrap font-bold">
                     <span>Todos los Enlaces</span>
-                    <span class="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded-full font-bold">{{ $mUserLinkCount }}</span>
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $mUserLinkCount }}</span>
                 </div>
 
             @elseif($activeView === 'periodicas')
                 <!-- Subnavegación Contextual: Tareas Periódicas -->
-                <div class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-500 whitespace-nowrap">
-                    <i data-lucide="repeat" class="w-3.5 h-3.5"></i>
+                <div class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-indigo-400 text-white whitespace-nowrap font-bold">
                     <span>Todas las Reglas</span>
-                    <span class="text-[10px] bg-indigo-100 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-400 px-1.5 py-0.2 rounded-full font-bold">{{ $recurringTasks->count() }}</span>
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $recurringTasks->count() }}</span>
                 </div>
-                <div class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-transparent text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                <div class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-transparent text-slate-300 whitespace-nowrap">
                     <span>Activas: {{ $recurringTasks->where('active', true)->count() }}</span>
                 </div>
 
             @elseif($activeView === 'papelera')
                 <!-- Subnavegación Contextual: Papelera -->
                 <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'todas']) }}"
-                    class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                    {{ $trashFilter === 'todas' ? 'border-red-600 text-red-600 dark:text-red-400 dark:border-red-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $trashFilter === 'todas' ? 'border-red-400 text-red-300 font-bold' : 'border-transparent text-slate-300 hover:text-white' }}">
                     <span>Todas</span>
-                    <span class="text-[10px] bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 px-1.5 py-0.2 rounded-full font-bold">{{ $allTrashCount }}</span>
+                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $allTrashCount }}</span>
                 </a>
 
                 <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'dia']) }}"
-                    class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                    {{ $trashFilter === 'dia' ? 'border-red-600 text-red-600 dark:text-red-400 dark:border-red-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $trashFilter === 'dia' ? 'border-red-400 text-red-300 font-bold' : 'border-transparent text-slate-300 hover:text-white' }}">
                     <span>Hoy</span>
                 </a>
 
                 <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'semana']) }}"
-                    class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                    {{ $trashFilter === 'semana' ? 'border-red-600 text-red-600 dark:text-red-400 dark:border-red-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $trashFilter === 'semana' ? 'border-red-400 text-red-300 font-bold' : 'border-transparent text-slate-300 hover:text-white' }}">
                     <span>Esta Semana</span>
                 </a>
 
                 <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'mes']) }}"
-                    class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                    {{ $trashFilter === 'mes' ? 'border-red-600 text-red-600 dark:text-red-400 dark:border-red-500' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200' }}">
+                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $trashFilter === 'mes' ? 'border-red-400 text-red-300 font-bold' : 'border-transparent text-slate-300 hover:text-white' }}">
                     <span>Este Mes</span>
+                </a>
+            @elseif($activeView === 'checklist' || $activeView === 'lista_tareas')
+                <!-- Subnavegación Contextual: CheckList -->
+                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'checklist']) }}"
+                    class="flex items-center px-2.5 py-1.5 text-xs font-bold border-b-2 border-indigo-400 whitespace-nowrap shrink-0"
+                    style="color: #FFFFFF !important; font-weight: 700 !important;">
+                    <span>CheckList</span>
                 </a>
             @endif
         </nav>
         @endif
 
         <!-- Right (Desktop lg+): Theme toggle, Action Button & Logout -->
-        <div class="hidden lg:flex lg:flex-none items-center lg:justify-start py-3.5 space-x-3 lg:ml-auto lg:pl-4 lg:border-l lg:border-slate-200/80 lg:dark:border-slate-800/80">
+        <div class="hidden lg:flex lg:flex-none items-center lg:justify-start py-3.5 lg:py-0 min-h-[58px] lg:min-h-[72px] space-x-3 lg:ml-auto lg:pl-4 lg:border-l lg:border-black/15 lg:dark:border-slate-800/80">
             @if($activeProject)
                 @if($activeView === 'resumen' || $activeView === 'kanban' || $activeView === 'calendario')
                     @if(!$user->isHelper())
                         <button onclick="openTaskModal()"
-                            class="py-2 px-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95">
+                            class="py-2 px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95 border border-slate-700/80 dark:border-slate-600/80">
                             <i data-lucide="plus-circle" class="w-4 h-4"></i>
                             <span>Agregar Tarea</span>
                         </button>
                     @endif
                 @elseif($activeView === 'incidencias')
                     <button onclick="openIncidentModal()"
-                        class="py-2 px-3.5 bg-red-600 hover:bg-red-500 text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95">
+                        class="py-2 px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95 border border-slate-700/80 dark:border-slate-600/80">
                         <i data-lucide="alert-circle" class="w-4 h-4"></i>
                         <span>Reportar Incidencia</span>
                     </button>
                 @elseif($activeView === 'periodicas')
                     @if(!$user->isHelper())
                         <button onclick="openRecurringTaskModal()"
-                            class="py-2 px-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95">
+                            class="py-2 px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95 border border-slate-700/80 dark:border-slate-600/80">
                             <i data-lucide="plus-circle" class="w-4 h-4"></i>
                             <span>Nueva Tarea Periódica</span>
                         </button>
                     @endif
                 @elseif($activeView === 'enlaces' && !$user->isHelper())
                     <button onclick='openProjectModal(@json($activeProject->load("links.assignedUsers")))'
-                        class="py-2 px-3.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95">
+                        class="py-2 px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95 border border-slate-700/80 dark:border-slate-600/80">
                         <i data-lucide="link" class="w-4 h-4"></i>
                         <span>Gestionar Enlaces</span>
                     </button>
@@ -588,14 +648,14 @@
             @endif
 
             <!-- Theme toggle button on desktop -->
-            <button type="button" onclick="toggleTheme()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-amber-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition" title="Cambiar modo claro / oscuro">
+            <button type="button" onclick="toggleTheme()" class="p-2 rounded-xl bg-white/70 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-700 text-black dark:text-amber-300 border border-black/15 dark:border-slate-700/70 transition" title="Cambiar modo claro / oscuro">
                 <span class="theme-icon-moon"><i data-lucide="moon" class="w-4 h-4"></i></span>
-                <span class="theme-icon-sun hidden"><i data-lucide="sun" class="w-4 h-4"></i></span>
+                <span class="theme-icon-sun hidden"><i data-lucide="sun" class="w-4 h-4 text-amber-400"></i></span>
             </button>
 
             <form method="POST" action="{{ route('logout') }}" class="inline">
                 @csrf
-                <button type="submit" title="Cerrar Sesión" class="flex items-center space-x-1.5 py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-600 dark:hover:text-red-400 text-xs font-semibold transition border border-transparent hover:border-red-200 dark:hover:border-red-900/40">
+                <button type="submit" title="Cerrar Sesión" class="flex items-center space-x-1.5 py-2 px-3 rounded-xl bg-white/70 hover:bg-red-50 dark:bg-slate-800/80 dark:hover:bg-red-950/60 text-black hover:text-red-600 dark:text-slate-300 dark:hover:text-red-300 text-xs font-bold transition border border-black/15 dark:border-slate-700/70 hover:border-red-200 dark:hover:border-red-900/60">
                     <span>Salir</span>
                     <i data-lucide="log-out" class="w-3.5 h-3.5"></i> 
                 </button>
@@ -613,7 +673,7 @@
                 <h3 class="text-xl font-bold text-slate-800 dark:text-white tracking-tight">Sin Proyecto Seleccionado</h3>
                 <p class="text-sm text-slate-500 dark:text-slate-400 max-w-sm mt-1.5 leading-relaxed">Selecciona un proyecto en la barra lateral para ver su tablero y tareas, o crea uno nuevo para comenzar.</p>
                 @if($user->hasFullAccess())
-                    <button onclick="openProjectModal()" class="mt-5 py-2.5 px-5 bg-[#0f172a] hover:bg-slate-800 text-white font-medium rounded-xl text-sm flex items-center space-x-2 shadow-soft transition active:scale-95">
+                    <button onclick="openProjectModal()" class="mt-5 py-2.5 px-5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-sm flex items-center space-x-2 shadow-soft transition active:scale-95">
                         <i data-lucide="plus" class="w-4 h-4"></i>
                         <span>Crear Primer Proyecto</span>
                     </button>
@@ -691,87 +751,73 @@
 
                     <!-- 5 Core Metric KPI Cards (Inspired by diseñosreferencia) -->
                     <div id="kpi-stats-grid" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
-                        <!-- KPI 1: Total de tareas -->
-                        <div class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
-                            <!--
-                            Futuro: aquí podría agregarse un acceso "Ver todas".
-                            Actualmente no mostrar porque las secciones ya están disponibles desde el header.
-                            -->
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                                    <i data-lucide="list-checks" class="w-5 h-5"></i>
+                        <!-- KPI 1: Tareas vencidas -->
+                        <div class="p-3.5 sm:p-4 lg:p-5 lg:min-h-[125px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                                    <i data-lucide="alert-triangle" class="w-5 h-5 lg:w-6 lg:h-6"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="text-2xl font-black text-slate-900 dark:text-white leading-none block tracking-tight">{{ $totalTasksCount }}</span>
-                                    <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-1 block truncate">Total de tareas</span>
+                                    <span class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $overdueCount }}</span>
+                                    <span class="text-xs sm:text-sm font-bold text-black dark:text-slate-300 mt-1.5 block truncate">Tareas vencidas</span>
+                                </div>
+                            </div>
+                            <!-- Acceso "Ver todas" para consultar tareas (solo visible en escritorio) -->
+                            <div class="hidden lg:block mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'kanban']) }}" class="text-[11px] sm:text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline transition inline-flex items-center gap-1">
+                                    <span>Ver todas</span>
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- KPI 2: En proceso -->
+                        <div class="p-3.5 sm:p-4 lg:p-5 lg:min-h-[125px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                                    <i data-lucide="clock" class="w-5 h-5 lg:w-6 lg:h-6"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <span class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $inProgressTasksCount }}</span>
+                                    <span class="text-xs sm:text-sm font-bold text-black dark:text-slate-300 mt-1.5 block truncate">En proceso</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- KPI 2: En curso -->
-                        <div class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
-                            <!--
-                            Futuro: aquí podría agregarse un acceso "Ver todas".
-                            Actualmente no mostrar porque las secciones ya están disponibles desde el header.
-                            -->
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                                    <i data-lucide="clock" class="w-5 h-5"></i>
+                        <!-- KPI 3: En revisión -->
+                        <div class="p-3.5 sm:p-4 lg:p-5 lg:min-h-[125px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                                    <i data-lucide="search" class="w-5 h-5 lg:w-6 lg:h-6"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="text-2xl font-black text-slate-900 dark:text-white leading-none block tracking-tight">{{ $inProgressTasksCount }}</span>
-                                    <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-1 block truncate">En curso</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- KPI 3: Atención / vencidas -->
-                        <div class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
-                            <!--
-                            Futuro: aquí podría agregarse un acceso "Ver todas".
-                            Actualmente no mostrar porque las secciones ya están disponibles desde el header.
-                            -->
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl {{ $overdueCount > 0 ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500' }} flex items-center justify-center shrink-0">
-                                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
-                                </div>
-                                <div class="min-w-0">
-                                    <span class="text-2xl font-black {{ $overdueCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white' }} leading-none block tracking-tight">{{ $overdueCount }}</span>
-                                    <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-1 block truncate">Atención / vencidas</span>
+                                    <span class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $inReviewTasksCount }}</span>
+                                    <span class="text-xs sm:text-sm font-bold text-black dark:text-slate-300 mt-1.5 block truncate">En revisión</span>
                                 </div>
                             </div>
                         </div>
 
                         <!-- KPI 4: Incidencias -->
-                        <div class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
-                            <!--
-                            Futuro: aquí podría agregarse un acceso "Ver todas".
-                            Actualmente no mostrar porque las secciones ya están disponibles desde el header.
-                            -->
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-                                    <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                        <div class="p-3.5 sm:p-4 lg:p-5 lg:min-h-[125px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                                    <i data-lucide="shield-alert" class="w-5 h-5 lg:w-6 lg:h-6"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="text-2xl font-black text-slate-900 dark:text-white leading-none block tracking-tight">{{ $openIncidentsCount }}</span>
-                                    <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-1 block truncate">Incidencias</span>
+                                    <span class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $incidents->count() }}</span>
+                                    <span class="text-xs sm:text-sm font-bold text-black dark:text-slate-300 mt-1.5 block truncate">Incidencias</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- KPI 5: Total tareas periódicas -->
-                        <div class="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between col-span-2 sm:col-span-2 lg:col-span-1 xl:col-span-1">
-                            <!--
-                            Futuro: aquí podría agregarse un acceso "Ver todas".
-                            Actualmente no mostrar porque las secciones ya están disponibles desde el header.
-                            -->
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                                    <i data-lucide="repeat" class="w-5 h-5"></i>
+                        <!-- KPI 5: Tareas periódicas -->
+                        <div class="p-3.5 sm:p-4 lg:p-5 lg:min-h-[125px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between col-span-2 sm:col-span-2 lg:col-span-1 xl:col-span-1">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                    <i data-lucide="repeat" class="w-5 h-5 lg:w-6 lg:h-6"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="text-2xl font-black text-slate-900 dark:text-white leading-none block tracking-tight">{{ $recurringTasks->count() }}</span>
-                                    <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 mt-1 block truncate">Total periódicas</span>
+                                    <span class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $recurringTasks->count() }}</span>
+                                    <span class="text-xs sm:text-sm font-bold text-black dark:text-slate-300 mt-1.5 block truncate">Tareas periódicas</span>
                                 </div>
                             </div>
                         </div>
@@ -787,7 +833,7 @@
                             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft">
                                 <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 gap-2.5 mb-4">
                                     <div>
-                                        <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <h3 class="text-sm sm:text-base font-bold text-black dark:text-white flex items-center gap-2">
                                             <i data-lucide="check-square" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
                                             <span>Tareas del Proyecto</span>
                                         </h3>
@@ -832,18 +878,39 @@
                                                     $dueDateStr = \Carbon\Carbon::parse($t->start_date)->format('d/m/Y') . ($t->start_time ? ' a las ' . substr($t->start_time, 0, 5) : '');
                                                 }
                                             @endphp
+                                            @php
+                                                $isPendingApproval = ($t->status === 'en_revision' && $t->needs_review);
+                                                $canApproveReject = ($isPendingApproval && $user->hasFullAccess());
+                                                $isHelperRestricted = ($isPendingApproval && !$user->hasFullAccess());
+                                            @endphp
 
                                             <div class="p-3 sm:p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 transition shadow-xs space-y-2">
                                                 <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
                                                     <!-- Checkbox & Title -->
                                                     <div class="flex items-start gap-2.5 min-w-0 flex-1">
-                                                        <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="mt-0.5 shrink-0">
-                                                            @csrf
-                                                            @method('PATCH')
-                                                            <input type="hidden" name="status" value="{{ $t->status === 'finalizado' ? 'no_iniciado' : ($t->needs_review && !$user->hasFullAccess() ? 'en_revision' : 'finalizado') }}">
-                                                            <input type="checkbox" onchange="this.form.submit()" {{ $t->status === 'finalizado' ? 'checked' : '' }}
-                                                                class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer">
-                                                        </form>
+                                                        @if($isHelperRestricted)
+                                                            <div class="mt-0.5 shrink-0" title="En revisión: pendiente de aprobación del administrador">
+                                                                <span class="w-4 h-4 rounded border border-purple-400 bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center cursor-not-allowed">
+                                                                    <i data-lucide="clock" class="w-2.5 h-2.5"></i>
+                                                                </span>
+                                                            </div>
+                                                        @elseif($canApproveReject)
+                                                            <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="mt-0.5 shrink-0">
+                                                                @csrf
+                                                                @method('PATCH')
+                                                                <input type="hidden" name="status" value="finalizado">
+                                                                <input type="checkbox" onchange="this.form.submit()" title="Marcar como finalizado (aprobar)"
+                                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 accent-emerald-600 cursor-pointer">
+                                                            </form>
+                                                        @else
+                                                            <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="mt-0.5 shrink-0">
+                                                                @csrf
+                                                                @method('PATCH')
+                                                                <input type="hidden" name="status" value="{{ $t->status === 'finalizado' ? 'no_iniciado' : ($t->needs_review && !$user->hasFullAccess() ? 'en_revision' : 'finalizado') }}">
+                                                                <input type="checkbox" onchange="this.form.submit()" {{ $t->status === 'finalizado' ? 'checked' : '' }}
+                                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer">
+                                                            </form>
+                                                        @endif
 
                                                         <div class="min-w-0 flex-1">
                                                             <h4 class="text-xs sm:text-sm font-semibold break-words {{ $t->status === 'finalizado' ? 'line-through text-slate-400 dark:text-slate-500' : ($t->isOverdue() ? 'text-red-600 dark:text-red-400 font-bold' : ($isTodayTask ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-800 dark:text-slate-100')) }}">
@@ -876,7 +943,7 @@
                                                                 @endif
 
                                                                 <span class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full
-                                                                    {{ $t->priority === 'urgente' || $t->priority === 'alta' ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-900/40' : ($t->priority === 'media' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-900/40' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300') }}">
+                                                                    {{ $t->priority === 'alta' ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-900/40' : ($t->priority === 'media' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-900/40' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300') }}">
                                                                     {{ $t->priority }}
                                                                 </span>
 
@@ -901,6 +968,33 @@
                                                             @endforeach
                                                         </div>
 
+                                                        <!-- Selector de estado rápido con iconos de configuración -->
+                                                        @if($user->hasFullAccess())
+                                                            <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                                                                @foreach($quickStatusList as $stBtn)
+                                                                    @php
+                                                                        $stIcon = $stBtn['ruta_icono'] ?? ($estadoIconos[$stBtn['id']] ?? null);
+                                                                        $hasCustomIcon = !empty($stIcon) && file_exists(public_path($stIcon));
+                                                                        $isActive = ($t->status === $stBtn['id']);
+                                                                        $btnColor = $stBtn['color'] ?? ($estadoColores[$stBtn['id']] ?? '#64748b');
+                                                                    @endphp
+                                                                    <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="inline">
+                                                                        @csrf
+                                                                        @method('PATCH')
+                                                                        <input type="hidden" name="status" value="{{ $stBtn['id'] }}">
+                                                                        <button type="submit" title="{{ $stBtn['title'] }}"
+                                                                            class="w-6 h-6 rounded-md flex items-center justify-center transition p-0.5 {{ $isActive ? 'bg-white dark:bg-slate-700 shadow-xs ring-1 ring-slate-300 dark:ring-slate-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700/60' }}">
+                                                                            @if($hasCustomIcon)
+                                                                                <img src="{{ asset($stIcon) }}" alt="{{ $stBtn['title'] }}" class="w-3.5 h-3.5 object-contain rounded-xs transition-transform {{ $isActive ? 'scale-110 drop-shadow-xs' : 'opacity-65 hover:opacity-100' }}">
+                                                                            @else
+                                                                                <i data-lucide="circle" class="w-3.5 h-3.5 {{ $isActive ? 'stroke-[2.5]' : 'stroke-[1.5]' }}" @if($isActive) style="color: {{ $btnColor }}" @endif></i>
+                                                                            @endif
+                                                                        </button>
+                                                                    </form>
+                                                                @endforeach
+                                                            </div>
+                                                        @endif
+
                                                         <!-- Status badge -->
                                                         <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md 
                                                             {{ $t->status === 'finalizado' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : ($t->status === 'en_proceso' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' : ($t->status === 'en_revision' ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300' : ($t->status === 'rechazado' ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'))) }}">
@@ -920,6 +1014,28 @@
                                                         @endif
                                                     </div>
                                                 </div>
+
+                                                <!-- Review Actions (Aprobar / Rechazar estilo Kanban) -->
+                                                @if($canApproveReject)
+                                                    <div class="flex items-center gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
+                                                        <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="flex-1">
+                                                            @csrf @method('PATCH')
+                                                            <input type="hidden" name="status" value="finalizado">
+                                                            <button type="submit" class="w-full py-1 text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg transition flex items-center justify-center space-x-1 cursor-pointer">
+                                                                <i data-lucide="check" class="w-3 h-3"></i>
+                                                                <span>Aprobar</span>
+                                                            </button>
+                                                        </form>
+                                                        <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="flex-1">
+                                                            @csrf @method('PATCH')
+                                                            <input type="hidden" name="status" value="rechazado">
+                                                            <button type="submit" class="w-full py-1 text-[11px] font-semibold bg-red-50 dark:bg-red-950/60 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg transition flex items-center justify-center space-x-1 cursor-pointer">
+                                                                <i data-lucide="x" class="w-3 h-3"></i>
+                                                                <span>Rechazar</span>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                @endif
 
                                                 <!-- Subtasks preview -->
                                                 @if($t->subtasks->count() > 0)
@@ -945,9 +1061,9 @@
 
                             <!-- Card: Desglose y Distribución de Estados -->
                             <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft">
-                                <h3 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-3 flex items-center justify-between">
+                                <h3 class="text-xs sm:text-sm font-bold text-black dark:text-white uppercase tracking-wider mb-3 flex items-center justify-between">
                                     <span>Distribución de Estados</span>
-                                    <span class="text-xs font-normal text-slate-500 dark:text-slate-400">{{ $totalTasksCount }} tareas totales</span>
+                                    <span class="text-xs font-semibold text-black dark:text-slate-400">{{ $totalTasksCount }} tareas totales</span>
                                 </h3>
 
                                 <!-- Multi-segment visual progress bar -->
@@ -1014,7 +1130,7 @@
                             <!-- Widget: Tareas Vencidas o de Atención Urgente -->
                             <div id="widget-urgencias" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft">
                                 <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
-                                    <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <h4 class="text-xs sm:text-sm font-bold text-black dark:text-white flex items-center gap-2">
                                         <i data-lucide="alert-octagon" class="w-4 h-4 {{ $overdueCount > 0 ? 'text-red-500' : 'text-emerald-500' }}"></i>
                                         <span>Bandeja de Urgencias</span>
                                     </h4>
@@ -1053,7 +1169,7 @@
                             <!-- Widget: Incidencias Recientes -->
                             <div id="widget-incidencias" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft">
                                 <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
-                                    <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <h4 class="text-xs sm:text-sm font-bold text-black dark:text-white flex items-center gap-2">
                                         <i data-lucide="alert-circle" class="w-4 h-4 text-rose-500"></i>
                                         <span>Incidencias Activas</span>
                                     </h4>
@@ -1196,6 +1312,23 @@
                             </div>
 
                             <div class="flex items-center gap-2 shrink-0">
+                                @if(!$user->isHelper() && $activeProject)
+                                    <div class="relative flex items-center">
+                                        <i data-lucide="user" class="w-3.5 h-3.5 absolute left-2.5 text-slate-400 pointer-events-none"></i>
+                                        <select id="calendar-user-filter" onchange="onUserFilterChange(this.value)"
+                                            class="pl-7 pr-7 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-semibold appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500/20 transition max-w-[145px] sm:max-w-[190px] truncate"
+                                            title="Filtrar tareas por usuario">
+                                            <option value="">Todos los usuarios</option>
+                                            @foreach($projectUsers as $pUser)
+                                                <option value="{{ $pUser->id }}" {{ (string)$selectedUserId === (string)$pUser->id ? 'selected' : '' }}>
+                                                    {{ $pUser->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 absolute right-2 text-slate-400 pointer-events-none"></i>
+                                    </div>
+                                @endif
+
                                 <!-- Botón Contraer / Expandir vista de Calendario principal (conmutador con Lista de Tareas) -->
                                 <button type="button" id="btn-toggle-calendar-split" onclick="toggleCalendarSplitView()"
                                     class="hidden lg:flex px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-semibold items-center gap-1.5 transition shadow-2xs active:scale-95 shrink-0"
@@ -1203,17 +1336,35 @@
                                     <i id="btn-toggle-calendar-icon" data-lucide="columns-2" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i>
                                     <span id="btn-toggle-calendar-text">Contraer</span>
                                 </button>
-
-                                {{-- 
-                                <!-- Botón Expandir a ventana flotante / modal en pantalla completa (comentado para mantener un único botón Expandir visible) -->
-                                <button type="button" onclick="expandCalendar()"
-                                    class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition shadow-2xs active:scale-95 shrink-0"
-                                    title="Expandir calendario a pantalla completa">
-                                    <i data-lucide="maximize-2" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i>
-                                    <span>Expandir</span>
-                                </button>
-                                --}}
                             </div>
+                        </div>
+
+                        <!-- Leyenda de Estados en Calendario según Configuración -->
+                        <div class="flex items-center gap-3 overflow-x-auto no-scrollbar text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-3 px-1 py-1">
+                            <span class="inline-flex items-center gap-1.5 shrink-0">
+                                <span class="w-2.5 h-2.5 rounded-full shadow-2xs" style="background-color: {{ $estadoColores['no_iniciado'] ?? '#64748b' }};"></span>
+                                No iniciado
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 shrink-0">
+                                <span class="w-2.5 h-2.5 rounded-full shadow-2xs" style="background-color: {{ $estadoColores['en_proceso'] ?? '#3b82f6' }};"></span>
+                                En proceso
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 shrink-0">
+                                <span class="w-2.5 h-2.5 rounded-full shadow-2xs" style="background-color: {{ $estadoColores['en_revision'] ?? '#f59e0b' }};"></span>
+                                En revisión
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 shrink-0">
+                                <span class="w-2.5 h-2.5 rounded-full shadow-2xs" style="background-color: {{ $estadoColores['rechazado'] ?? '#ef4444' }};"></span>
+                                Rechazado
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 shrink-0">
+                                <span class="w-2.5 h-2.5 rounded-full shadow-2xs" style="background-color: {{ $estadoColores['finalizado'] ?? '#10b981' }};"></span>
+                                Finalizado
+                            </span>
+                            <span class="inline-flex items-center gap-1.5 shrink-0 text-red-600 dark:text-red-400 font-semibold border-l border-slate-200 dark:border-slate-700 pl-3">
+                                <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+                                No iniciado vencido (Rojo)
+                            </span>
                         </div>
 
                         <!-- Contenedor del calendario en vista normal -->
@@ -1233,17 +1384,21 @@
 
                             <!-- Tabs de Filtro: Tareas de Hoy vs Tareas del Mes -->
                             <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs overflow-x-auto no-scrollbar max-w-full">
-                                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => $activeView, 'task_filter' => 'hoy']) }}"
+                                @php
+                                    $todayVisibleCount = $selectedUserId ? $todayTasks->filter(fn($task) => $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $todayTasks->count();
+                                    $monthVisibleCount = $selectedUserId ? $monthTasks->filter(fn($task) => $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $monthTasks->count();
+                                @endphp
+                                <a id="tab-tasks-today" href="{{ route('dashboard', array_filter(['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => $activeView, 'task_filter' => 'hoy', 'user_id' => $selectedUserId])) }}"
                                     class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $taskFilter === 'hoy' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
                                     <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
                                     <span>Tareas de Hoy</span>
-                                    <span class="px-1.5 py-0.2 text-[10px] rounded-full {{ $taskFilter === 'hoy' ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $todayTasks->count() }}</span>
+                                    <span id="badge-count-today" class="px-1.5 py-0.2 text-[10px] rounded-full {{ $taskFilter === 'hoy' ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $todayVisibleCount }}</span>
                                 </a>
-                                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => $activeView, 'task_filter' => 'mes']) }}"
+                                <a id="tab-tasks-month" href="{{ route('dashboard', array_filter(['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => $activeView, 'task_filter' => 'mes', 'user_id' => $selectedUserId])) }}"
                                     class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $taskFilter === 'mes' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
                                     <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
                                     <span>Tareas del Mes</span>
-                                    <span class="px-1.5 py-0.2 text-[10px] rounded-full {{ $taskFilter === 'mes' ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $monthTasks->count() }}</span>
+                                    <span id="badge-count-month" class="px-1.5 py-0.2 text-[10px] rounded-full {{ $taskFilter === 'mes' ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $monthVisibleCount }}</span>
                                 </a>
                             </div>
                         </div>
@@ -1273,7 +1428,10 @@
 
                             <div class="space-y-6">
                                 @foreach($groupedTasks as $dateKey => $groupTasks)
-                                    <div>
+                                    @php
+                                        $visibleInGroupCount = $selectedUserId ? $groupTasks->filter(fn($task) => $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $groupTasks->count();
+                                    @endphp
+                                    <div class="task-date-group {{ $selectedUserId && $visibleInGroupCount === 0 ? 'hidden' : '' }}" data-group-date="{{ $dateKey }}">
                                         @if($taskFilter === 'mes')
                                             <div class="flex items-center gap-2 pb-2 mb-3 border-b border-slate-200 dark:border-slate-800">
                                                 <i data-lucide="calendar" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
@@ -1287,24 +1445,48 @@
                                                         @endif
                                                     @endif
                                                 </h4>
-                                                <span class="text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full ml-auto">
-                                                    {{ $groupTasks->count() }} tarea(s)
+                                                <span class="task-group-count text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full ml-auto">
+                                                    {{ $visibleInGroupCount }} tarea(s)
                                                 </span>
                                             </div>
                                         @endif
 
                                         <div class="space-y-3">
                                             @foreach($groupTasks as $t)
-                                                <div class="group p-3 sm:p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 transition shadow-xs space-y-2.5">
+                                                @php
+                                                    $isAssignedToSelected = !$selectedUserId || $t->assignedUsers->contains('id', (int)$selectedUserId);
+                                                    $isPendingApproval = ($t->status === 'en_revision' && $t->needs_review);
+                                                    $canApproveReject = ($isPendingApproval && $user->hasFullAccess());
+                                                    $isHelperRestricted = ($isPendingApproval && !$user->hasFullAccess());
+                                                @endphp
+                                                <div class="task-list-card group p-3 sm:p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 transition shadow-xs space-y-2.5 {{ $isAssignedToSelected ? '' : 'hidden' }}"
+                                                    data-task-id="{{ $t->id }}"
+                                                    data-assigned-users="{{ json_encode($t->assignedUsers->pluck('id')->all()) }}">
                                                     <!-- Fila Superior: Checkbox + Título + Descripción + Badges (Ancho Completo) -->
                                                     <div class="flex items-start gap-2.5 min-w-0">
-                                                        <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="mt-0.5 shrink-0">
-                                                            @csrf
-                                                            @method('PATCH')
-                                                            <input type="hidden" name="status" value="{{ $t->status === 'finalizado' ? 'no_iniciado' : ($t->needs_review && !$user->hasFullAccess() ? 'en_revision' : 'finalizado') }}">
-                                                            <input type="checkbox" onchange="this.form.submit()" {{ $t->status === 'finalizado' ? 'checked' : '' }}
-                                                                class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer">
-                                                        </form>
+                                                        @if($isHelperRestricted)
+                                                            <div class="mt-0.5 shrink-0" title="En revisión: pendiente de aprobación del administrador">
+                                                                <span class="w-4 h-4 rounded border border-purple-400 bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center cursor-not-allowed">
+                                                                    <i data-lucide="clock" class="w-2.5 h-2.5"></i>
+                                                                </span>
+                                                            </div>
+                                                        @elseif($canApproveReject)
+                                                            <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="mt-0.5 shrink-0">
+                                                                @csrf
+                                                                @method('PATCH')
+                                                                <input type="hidden" name="status" value="finalizado">
+                                                                <input type="checkbox" onchange="this.form.submit()" title="Marcar como finalizado (aprobar)"
+                                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 accent-emerald-600 cursor-pointer">
+                                                            </form>
+                                                        @else
+                                                            <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="mt-0.5 shrink-0">
+                                                                @csrf
+                                                                @method('PATCH')
+                                                                <input type="hidden" name="status" value="{{ $t->status === 'finalizado' ? 'no_iniciado' : ($t->needs_review && !$user->hasFullAccess() ? 'en_revision' : 'finalizado') }}">
+                                                                <input type="checkbox" onchange="this.form.submit()" {{ $t->status === 'finalizado' ? 'checked' : '' }}
+                                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer">
+                                                            </form>
+                                                        @endif
 
                                                         <div class="min-w-0 flex-1">
                                                             @php
@@ -1350,7 +1532,7 @@
                                                                 @endif
 
                                                                 <span class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full
-                                                                    {{ $t->priority === 'urgente' || $t->priority === 'alta' ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-900/40' : ($t->priority === 'media' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-900/40' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300') }}">
+                                                                    {{ $t->priority === 'alta' ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-900/40' : ($t->priority === 'media' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-900/40' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300') }}">
                                                                     {{ $t->priority }}
                                                                 </span>
 
@@ -1364,24 +1546,52 @@
                                                         </div>
                                                     </div>
 
+                                                    <!-- Review Actions (Aprobar / Rechazar estilo Kanban) -->
+                                                    @if($canApproveReject)
+                                                        <div class="flex items-center gap-1.5 pt-1">
+                                                            <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="flex-1">
+                                                                @csrf @method('PATCH')
+                                                                <input type="hidden" name="status" value="finalizado">
+                                                                <button type="submit" class="w-full py-1 text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg transition flex items-center justify-center space-x-1 cursor-pointer">
+                                                                    <i data-lucide="check" class="w-3 h-3"></i>
+                                                                    <span>Aprobar</span>
+                                                                </button>
+                                                            </form>
+                                                            <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="flex-1">
+                                                                @csrf @method('PATCH')
+                                                                <input type="hidden" name="status" value="rechazado">
+                                                                <button type="submit" class="w-full py-1 text-[11px] font-semibold bg-red-50 dark:bg-red-950/60 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg transition flex items-center justify-center space-x-1 cursor-pointer">
+                                                                    <i data-lucide="x" class="w-3 h-3"></i>
+                                                                    <span>Rechazar</span>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    @endif
+
                                                     <!-- Fila Inferior: Acciones Rápidas (Distribución limpia y equilibrada) -->
                                                     <div class="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-2 task-bottom-row-expandable">
                                                         <!-- Selector de estado rápido y badge de estado -->
                                                         <div class="flex items-center gap-1.5 flex-wrap">
                                                             @if($user->hasFullAccess())
                                                                 <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                                                                    @foreach([
-                                                                        ['id' => 'no_iniciado', 'title' => 'No Iniciado', 'icon' => 'circle', 'active' => 'bg-slate-300 text-slate-800 dark:bg-slate-600 dark:text-white', 'inactive' => 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'],
-                                                                        ['id' => 'en_proceso', 'title' => 'En Proceso', 'icon' => 'clock', 'active' => 'bg-amber-500 text-white', 'inactive' => 'text-slate-400 hover:text-amber-500'],
-                                                                        ['id' => 'finalizado', 'title' => 'Finalizado', 'icon' => 'check-circle', 'active' => 'bg-emerald-500 text-white', 'inactive' => 'text-slate-400 hover:text-emerald-500'],
-                                                                    ] as $stBtn)
+                                                                    @foreach($quickStatusList as $stBtn)
+                                                                        @php
+                                                                            $stIcon = $stBtn['ruta_icono'] ?? ($estadoIconos[$stBtn['id']] ?? null);
+                                                                            $hasCustomIcon = !empty($stIcon) && file_exists(public_path($stIcon));
+                                                                            $isActive = ($t->status === $stBtn['id']);
+                                                                            $btnColor = $stBtn['color'] ?? ($estadoColores[$stBtn['id']] ?? '#64748b');
+                                                                        @endphp
                                                                         <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="inline">
                                                                             @csrf
                                                                             @method('PATCH')
                                                                             <input type="hidden" name="status" value="{{ $stBtn['id'] }}">
                                                                             <button type="submit" title="{{ $stBtn['title'] }}"
-                                                                                class="w-6 h-6 rounded-md flex items-center justify-center transition {{ $t->status === $stBtn['id'] ? $stBtn['active'] : $stBtn['inactive'] }}">
-                                                                                <i data-lucide="{{ $stBtn['icon'] }}" class="w-3.5 h-3.5"></i>
+                                                                                class="w-6 h-6 rounded-md flex items-center justify-center transition p-0.5 {{ $isActive ? 'bg-white dark:bg-slate-700 shadow-xs ring-1 ring-slate-300 dark:ring-slate-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700/60' }}">
+                                                                            @if($hasCustomIcon)
+                                                                                <img src="{{ asset($stIcon) }}" alt="{{ $stBtn['title'] }}" class="w-3.5 h-3.5 object-contain rounded-xs transition-transform {{ $isActive ? 'scale-110 drop-shadow-xs' : 'opacity-65 hover:opacity-100' }}">
+                                                                            @else
+                                                                                <i data-lucide="circle" class="w-3.5 h-3.5 {{ $isActive ? 'stroke-[2.5]' : 'stroke-[1.5]' }}" @if($isActive) style="color: {{ $btnColor }}" @endif></i>
+                                                                            @endif
                                                                             </button>
                                                                         </form>
                                                                     @endforeach
@@ -1438,6 +1648,13 @@
                                         </div>
                                     </div>
                                 @endforeach
+                            </div>
+
+                            @php
+                                $totalVisibleTasks = $selectedUserId ? $filteredTasks->filter(fn($task) => $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $filteredTasks->count();
+                            @endphp
+                            <div id="cal-list-empty-user" class="{{ $totalVisibleTasks === 0 ? '' : 'hidden' }} text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
+                                No hay tareas asignadas a este usuario para este período.
                             </div>
                         @endif
                         </div>
@@ -1628,7 +1845,7 @@
                                             <!-- Card Footer: Priority Badge + Member Avatars + Quick Status Select -->
                                             <div class="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between flex-wrap gap-2">
                                                 <span class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md shrink-0
-                                                    {{ $t->priority === 'urgente' || $t->priority === 'alta' ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-900/40' : ($t->priority === 'media' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/40' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600') }}">
+                                                    {{ $t->priority === 'alta' ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-900/40' : ($t->priority === 'media' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/40' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600') }}">
                                                     {{ $t->priority }}
                                                 </span>
 
@@ -1808,7 +2025,7 @@
 
                                         <div class="flex flex-wrap items-center gap-1.5 pt-1">
                                             <span class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md
-                                                {{ $rule->priority === 'urgente' || $rule->priority === 'alta' ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">
+                                                {{ $rule->priority === 'alta' ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400' : ($rule->priority === 'media' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300') }}">
                                                 {{ $rule->priority }}
                                             </span>
 
@@ -1968,8 +2185,7 @@
 
                                             <!-- Prioridad -->
                                             <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold
-                                                @if($t->priority === 'urgente') bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300
-                                                @elseif($t->priority === 'alta') bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300
+                                                @if($t->priority === 'alta') bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300
                                                 @elseif($t->priority === 'media') bg-yellow-50 dark:bg-yellow-950/60 text-yellow-700 dark:text-yellow-300
                                                 @else bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400
                                                 @endif">
@@ -2024,6 +2240,282 @@
                         </div>
                     @endif
                 </div>
+
+            <!-- ========================================================================= -->
+            <!-- VIEW: CHECKLIST (MATRIZ MENSUAL CON CHECKS)                               -->
+            <!-- ========================================================================= -->
+            @elseif($activeView === 'checklist' || $activeView === 'lista_tareas')
+                <div class="space-y-4 sm:space-y-6 max-w-[1700px] mx-auto">
+                    <!-- Top Bar: Mes / Navegación y Filtros -->
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-soft flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="flex items-center space-x-3 sm:space-x-4 flex-wrap gap-y-2">
+                            <!-- Navegación Mes Anterior -->
+                            <a href="{{ route('dashboard', array_merge(request()->query(), ['view' => 'checklist', 'month' => $matrixData['prevMonth']])) }}"
+                                class="p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition shadow-2xs"
+                                title="Mes anterior ({{ $matrixData['prevMonth'] }})">
+                                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                            </a>
+
+                            <!-- Indicador de Mes y Año -->
+                            <div class="flex items-center space-x-2">
+                                <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-xs">
+                                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white capitalize tracking-tight leading-tight">
+                                        {{ $matrixData['monthLabel'] }}
+                                    </h2>
+                                   
+                                </div>
+                            </div>
+
+                            <!-- Navegación Mes Siguiente -->
+                            <a href="{{ route('dashboard', array_merge(request()->query(), ['view' => 'checklist', 'month' => $matrixData['nextMonth']])) }}"
+                                class="p-2 sm:p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition shadow-2xs"
+                                title="Mes siguiente ({{ $matrixData['nextMonth'] }})">
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </a>
+
+                            <!-- Botón Mes Actual / Hoy -->
+                            @if(!$matrixData['isCurrentMonth'])
+                                <a href="{{ route('dashboard', array_merge(request()->query(), ['view' => 'checklist', 'month' => $matrixData['currentMonth']])) }}"
+                                    class="px-3 py-1.5 text-xs font-semibold rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/80 transition shadow-2xs">
+                                    Ir al mes actual
+                                </a>
+                            @endif
+                        </div>
+
+                        <!-- Filtro por Usuario y Buscador -->
+                        <div class="flex items-center space-x-2.5 flex-wrap sm:flex-nowrap gap-y-2">
+                            <!-- Buscador en tiempo real de filas -->
+                            <div class="relative flex-1 sm:w-56">
+                                <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" id="matrixTaskSearch" oninput="filterMatrixRows()" placeholder="Buscar tarea..."
+                                    class="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                            </div>
+
+                            <!-- Filtro por Usuario (Para Admin / Asignados) -->
+                            @if($projectUsers->count() > 0 && !$user->isHelper())
+                                <div class="relative shrink-0">
+                                    <select onchange="window.location.href=this.value"
+                                        class="text-xs py-1.5 pl-2.5 pr-8 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                                        <option value="{{ route('dashboard', array_merge(request()->query(), ['view' => 'checklist', 'month' => $matrixData['month'], 'user_id' => ''])) }}">
+                                            Todos los usuarios
+                                        </option>
+                                        @foreach($projectUsers as $pUser)
+                                            <option value="{{ route('dashboard', array_merge(request()->query(), ['view' => 'checklist', 'month' => $matrixData['month'], 'user_id' => $pUser->id])) }}"
+                                                {{ (string)$selectedUserId === (string)$pUser->id ? 'selected' : '' }}>
+                                                {{ $pUser->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- KPI Cards Resumen Mes -->
+                   <!-- <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Tareas en seguimiento</span>
+                            <div class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{{ $matrixData['totalTasks'] }}</div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Checks programados</span>
+                            <div class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1" id="matrix-global-scheduled">{{ $matrixData['totalScheduled'] }}</div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Completados</span>
+                            <div class="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1" id="matrix-global-completed">{{ $matrixData['totalCompleted'] }}</div>
+                        </div>
+
+                        <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Cumplimiento</span>
+                                <span class="text-xs font-black text-indigo-600 dark:text-indigo-400" id="matrix-global-percent">{{ $matrixData['overallProgress'] }}%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                                <div id="matrix-global-bar" class="bg-gradient-to-r from-indigo-500 to-emerald-500 h-full rounded-full transition-all duration-300" style="width: {{ $matrixData['overallProgress'] }}%"></div>
+                            </div>
+                        </div>
+                    </div>-->
+
+                    <!-- Tabla / Matriz con Columnas Semanales y Checks por Día -->
+                    <div class="relative overflow-x-auto overflow-y-auto max-h-[520px] sm:max-h-[620px] lg:max-h-[calc(100vh-290px)] min-h-[280px] rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-soft">
+                        <table class="w-full border-collapse text-left select-none">
+                            <thead class="sticky top-0 z-30 bg-white dark:bg-slate-900 shadow-xs">
+                                <!-- Fila 1: Títulos de Semana (Semana 1, Semana 2...) -->
+                                <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs">
+                                    <th class="sticky left-0 z-40 bg-slate-50 dark:bg-slate-900 p-3 min-w-[240px] sm:min-w-[280px] max-w-[300px] border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] font-bold text-slate-700 dark:text-slate-200">
+                                        Lista de Tareas
+                                    </th>
+                                    @foreach($matrixData['weeks'] as $wIdx => $week)
+                                        <th colspan="{{ $week['daysCount'] }}"
+                                            class="text-center py-2 px-1 text-[11px] font-black uppercase tracking-wider {{ $week['textColor'] }} {{ $week['bgHeader'] }} border-r border-slate-200/80 dark:border-slate-800">
+                                            {{ $week['name'] }}
+                                        </th>
+                                    @endforeach
+                                </tr>
+
+                                <!-- Fila 2: Abreviatura del Día y Número de Fecha -->
+                                <tr class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-[11px]">
+                                    <th class="sticky left-0 z-40 bg-white dark:bg-slate-900 p-2 min-w-[240px] sm:min-w-[280px] max-w-[300px] border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                                        Frecuencia y Nombre
+                                    </th>
+                                    @foreach($matrixData['days'] as $d => $dayInfo)
+                                        @php
+                                            $wTheme = $matrixData['weeks'][$dayInfo['weekIndex']];
+                                        @endphp
+                                        <th class="p-1 min-w-[38px] sm:min-w-[42px] text-center border-r border-slate-100 dark:border-slate-800/80 {{ $dayInfo['isToday'] ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : '' }}">
+                                            <div class="flex flex-col items-center justify-center py-1">
+                                                <span class="text-[10px] font-semibold lowercase leading-tight {{ $dayInfo['isToday'] ? 'text-indigo-600 dark:text-indigo-400 font-bold' : ($dayInfo['isWeekend'] ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300') }}">
+                                                    {{ $dayInfo['dayName'] }}
+                                                </span>
+                                                <span class="text-xs font-bold leading-tight mt-0.5 {{ $dayInfo['isToday'] ? 'w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs' : 'text-slate-800 dark:text-slate-200' }}">
+                                                    {{ $dayInfo['day'] }}
+                                                </span>
+                                            </div>
+                                        </th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
+                                @forelse($matrixData['rows'] as $row)
+                                    <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group matrix-task-row"
+                                        id="matrix-row-{{ $row['id'] }}"
+                                        data-task-title="{{ $row['title'] }}">
+                                        
+                                        <!-- Columna Fija Izquierda: Título y Datos de la Tarea -->
+                                        <td class="sticky left-0 z-20 bg-white dark:bg-slate-900 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-800/90 p-2.5 sm:p-3 min-w-[240px] sm:min-w-[280px] max-w-[300px] border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] transition-colors">
+                                            <div class="flex items-center space-x-2.5 min-w-0">
+                                                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 shadow-2xs
+                                                    {{ $row['type'] === 'periodica' ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300' }}">
+                                                    <i data-lucide="{{ $row['type'] === 'periodica' ? 'repeat' : 'check-circle-2' }}" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <span class="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate block" title="{{ $row['title'] }}">
+                                                        {{ $row['title'] }}
+                                                    </span>
+                                                    <div class="flex items-center space-x-1.5 text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 flex-wrap">
+                                                        @if($row['type'] === 'periodica')
+                                                            <span class="px-1.5 py-0.2 rounded font-semibold capitalize bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                                                                {{ $row['recurrence'] }}
+                                                            </span>
+                                                        @else
+                                                            <span class="px-1.5 py-0.2 rounded font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                                                                Espontánea
+                                                            </span>
+                                                        @endif
+                                                        @if($row['module'])
+                                                            <span class="truncate max-w-[90px] text-slate-400">{{ $row['module']->name }}</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <!-- Celdas de los Días del Mes con Checks -->
+                                        @foreach($matrixData['days'] as $d => $dayInfo)
+                                            @php
+                                                $cell = $row['cells'][$d] ?? ['scheduled' => false];
+                                                $wTheme = $matrixData['weeks'][$dayInfo['weekIndex']];
+                                            @endphp
+                                            <td class="p-1 min-w-[38px] sm:min-w-[42px] text-center align-middle border-r border-slate-100 dark:border-slate-800/60 {{ $dayInfo['isToday'] ? 'bg-indigo-50/20 dark:bg-indigo-950/20' : '' }}">
+                                                @if($cell['scheduled'])
+                                                    <div class="flex flex-col items-center justify-center gap-1 mx-auto py-0.5">
+                                                        @if(!empty($cell['can_approve_reject']))
+                                                            <div class="matrix-approval-actions flex items-center justify-center gap-1" id="approval-actions-{{ $cell['task_id'] }}">
+                                                                <button type="button"
+                                                                    onclick="approveMatrixTask(this, {{ $cell['task_id'] }})"
+                                                                    data-task-id="{{ $cell['task_id'] }}"
+                                                                    data-row-id="{{ $row['id'] }}"
+                                                                    data-week-bg="{{ $wTheme['checkBg'] }}"
+                                                                    data-week-pending="{{ $wTheme['checkPending'] }}"
+                                                                    class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center shadow-xs transition transform hover:scale-110 active:scale-95 cursor-pointer"
+                                                                    title="Aprobar tarea">
+                                                                    <i data-lucide="check" class="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]"></i>
+                                                                </button>
+                                                                <button type="button"
+                                                                    onclick="rejectMatrixTask(this, {{ $cell['task_id'] }})"
+                                                                    data-task-id="{{ $cell['task_id'] }}"
+                                                                    data-row-id="{{ $row['id'] }}"
+                                                                    data-week-bg="{{ $wTheme['checkBg'] }}"
+                                                                    data-week-pending="{{ $wTheme['checkPending'] }}"
+                                                                    class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-xs transition transform hover:scale-110 active:scale-95 cursor-pointer"
+                                                                    title="Rechazar tarea">
+                                                                    <i data-lucide="x" class="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]"></i>
+                                                                </button>
+                                                            </div>
+                                                        @elseif(!empty($cell['is_pending_approval']) && !$user->hasFullAccess())
+                                                            <div class="flex items-center justify-center" title="En revisión: pendiente de aprobación">
+                                                                <span class="text-[8px] sm:text-[9px] font-bold px-1 py-0.2 rounded bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 leading-none">Rev</span>
+                                                            </div>
+                                                        @endif
+
+                                                        <button type="button"
+                                                            id="matrix-btn-{{ $cell['task_id'] }}"
+                                                            onclick="toggleMatrixCheck(this, {{ $cell['task_id'] }})"
+                                                            data-task-id="{{ $cell['task_id'] }}"
+                                                            data-completed="{{ $cell['is_completed'] ? 'true' : 'false' }}"
+                                                            data-status="{{ $cell['status'] }}"
+                                                            data-needs-review="{{ !empty($cell['needs_review']) ? 'true' : 'false' }}"
+                                                            data-row-id="{{ $row['id'] }}"
+                                                            data-week-bg="{{ $wTheme['checkBg'] }}"
+                                                            data-week-pending="{{ $wTheme['checkPending'] }}"
+                                                            class="matrix-check-btn w-6 h-6 sm:w-7 sm:h-7 rounded-md mx-auto flex items-center justify-center transition-all duration-150 transform active:scale-90 focus:outline-none select-none
+                                                            {{ $cell['is_completed'] ? $wTheme['checkBg'] : (!empty($cell['is_pending_approval']) ? 'border-2 border-dashed border-purple-400 dark:border-purple-500 bg-purple-50/40 dark:bg-purple-950/20 text-purple-500' : 'border-2 ' . $wTheme['checkPending'] . ' text-transparent hover:scale-105') }}
+                                                            {{ empty($cell['can_toggle']) ? 'cursor-not-allowed opacity-75' : 'cursor-pointer' }}"
+                                                            title="{{ $cell['is_completed'] ? 'Completado en ' . $cell['date'] . ' (clic para desmarcar)' : (!empty($cell['is_pending_approval']) ? 'En revisión: pendiente de aprobación' : 'Pendiente en ' . $cell['date'] . ' (clic para completar)') }}"
+                                                            {{ empty($cell['can_toggle']) ? 'disabled' : '' }}>
+                                                            @if($cell['is_completed'])
+                                                                <i data-lucide="check" class="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3] block"></i>
+                                                            @elseif(!empty($cell['is_pending_approval']))
+                                                                <i data-lucide="clock" class="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2] block"></i>
+                                                            @else
+                                                                <i data-lucide="check" class="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3] hidden"></i>
+                                                            @endif
+                                                        </button>
+                                                    </div>
+                                                @else
+                                                    <div class="w-6 h-6 sm:w-7 sm:h-7 mx-auto"></div>
+                                                @endif
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="{{ count($matrixData['days']) + 1 }}" class="py-16 text-center">
+                                            <div class="flex flex-col items-center justify-center space-y-3">
+                                                <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                                                    <i data-lucide="calendar-x" class="w-7 h-7"></i>
+                                                </div>
+                                                <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200">No hay tareas programadas para este mes</h4>
+                                                <p class="text-xs text-slate-400 max-w-sm">No se encontraron tareas ni reglas periódicas en {{ $matrixData['monthLabel'] }}.</p>
+                                                @if(!$matrixData['isCurrentMonth'])
+                                                    <div class="pt-2">
+                                                        <a href="{{ route('dashboard', array_merge(request()->query(), ['view' => 'checklist', 'month' => $matrixData['currentMonth']])) }}"
+                                                            class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition">
+                                                            Ir al mes actual
+                                                        </a>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforelse
+
+                                <tr id="matrix-no-search-results" class="hidden">
+                                    <td colspan="{{ count($matrixData['days']) + 1 }}" class="py-10 text-center text-xs text-slate-400 dark:text-slate-500">
+                                        No se encontraron actividades que coincidan con la búsqueda.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             @endif
 
         @endif
@@ -2070,7 +2562,7 @@
             <!-- 5. Menú Más (Opciones del header que no caben en la barra inferior) -->
             <button type="button" onclick="toggleMoreMobileMenu()" id="btn-mobile-more"
                 class="flex flex-col items-center justify-center flex-1 h-full min-h-[44px] transition py-1
-                {{ in_array($activeView, ['enlaces', 'periodicas', 'papelera']) ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
+                {{ in_array($activeView, ['enlaces', 'periodicas', 'papelera', 'checklist']) ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
                 <i data-lucide="more-vertical" class="w-5 h-5"></i>
                 <span class="text-[10px] mt-1">Más</span>
             </button>
@@ -2171,6 +2663,17 @@
                     </div>
                 </a>
 
+                <!-- 8. Opción: CheckList -->
+                <a href="{{ route('dashboard', ['project_id' => $activeProject ? $activeProject->id : '', 'module_id' => $activeModuleId, 'view' => 'checklist']) }}"
+                    class="flex items-center gap-3 p-3 rounded-xl border transition {{ in_array($activeView, ['checklist', 'lista_tareas']) ? 'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800' }}">
+                    <div class="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 shrink-0">
+                        <i data-lucide="check-square" class="w-5 h-5"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-xs font-semibold truncate">CheckList</div>
+                    </div>
+                </a>
+
                 <!-- 8. Opción: Menú Lateral / Proyectos -->
                 <button type="button" onclick="toggleMoreMobileMenu(); toggleSidebar();"
                     class="flex items-center gap-3 p-3 rounded-xl border bg-slate-50 dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-left">
@@ -2219,6 +2722,22 @@
 
             <!-- Botón para Cerrar la vista expandida (solo botón X para cerrar) -->
             <div class="flex items-center gap-2 shrink-0">
+                @if(!$user->isHelper() && $activeProject)
+                    <div class="relative flex items-center">
+                        <i data-lucide="user" class="w-3.5 h-3.5 absolute left-2.5 text-slate-400 pointer-events-none"></i>
+                        <select id="calendar-modal-user-filter" onchange="onUserFilterChange(this.value)"
+                            class="pl-7 pr-7 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-semibold appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500/20 transition max-w-[145px] sm:max-w-[190px] truncate"
+                            title="Filtrar tareas por usuario">
+                            <option value="">Todos los usuarios</option>
+                            @foreach($projectUsers as $pUser)
+                                <option value="{{ $pUser->id }}" {{ (string)$selectedUserId === (string)$pUser->id ? 'selected' : '' }}>
+                                    {{ $pUser->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 absolute right-2 text-slate-400 pointer-events-none"></i>
+                    </div>
+                @endif
                 <button type="button" onclick="closeCalendarExpand()" class="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Cerrar">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
@@ -2232,8 +2751,8 @@
 @endif
 
 <!-- 1. Task Modal -->
-<div id="taskModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4 hidden">
-    <div class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 overflow-hidden">
+<div id="taskModal" class="fixed inset-0 bg-slate-950/75 z-50 flex items-center justify-center p-2 sm:p-4 hidden">
+    <div class="isolate task-modal-card bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div class="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/60">
             <h3 id="taskModalTitle" class="font-bold text-slate-900 dark:text-white text-sm sm:text-base">Nueva Tarea</h3>
             <button onclick="closeModal('taskModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -2301,6 +2820,7 @@
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Módulo del Proyecto</label>
                         <select id="task_module_id" name="module_id"
+                            style="color-scheme: light dark;"
                             class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs text-slate-900 dark:text-white outline-none">
                             <option value="">Sin Módulo (General)</option>
                             @if($activeProject)
@@ -2314,6 +2834,7 @@
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Estado</label>
                         <select id="task_status" name="status"
+                            style="color-scheme: light dark;"
                             class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs text-slate-900 dark:text-white outline-none">
                             <option value="no_iniciado">No Iniciado</option>
                             <option value="en_proceso">En Proceso</option>
@@ -2326,11 +2847,11 @@
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Prioridad</label>
                         <select id="task_priority" name="priority"
+                            style="color-scheme: light dark;"
                             class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl focus:ring-2 focus:ring-indigo-500 text-xs text-slate-900 dark:text-white outline-none">
                             <option value="baja">Baja</option>
                             <option value="media" selected>Media</option>
                             <option value="alta">Alta</option>
-                            <option value="urgente">Urgente</option>
                         </select>
                     </div>
 
@@ -2674,7 +3195,6 @@
                         <option value="baja">Baja</option>
                         <option value="media" selected>Media</option>
                         <option value="alta">Alta</option>
-                        <option value="urgente">Urgente</option>
                     </select>
                 </div>
 
@@ -2885,6 +3405,417 @@
         }
     });
 
+    function toggleDesktopMoreMenu() {
+        const dropdown = document.getElementById('desktop-more-dropdown');
+        const chevron = document.getElementById('desktop-more-chevron');
+        const btn = document.getElementById('btn-desktop-more');
+        if (!dropdown) return;
+        const isHidden = dropdown.classList.contains('hidden');
+        if (isHidden) {
+            dropdown.classList.remove('hidden');
+            if (chevron) chevron.classList.add('rotate-180');
+            if (btn) btn.setAttribute('aria-expanded', 'true');
+            if (window.lucide) lucide.createIcons({ root: dropdown });
+        } else {
+            closeDesktopMoreMenu();
+        }
+    }
+
+    function closeDesktopMoreMenu() {
+        const dropdown = document.getElementById('desktop-more-dropdown');
+        const chevron = document.getElementById('desktop-more-chevron');
+        const btn = document.getElementById('btn-desktop-more');
+        if (!dropdown || dropdown.classList.contains('hidden')) return;
+        dropdown.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+
+    document.addEventListener('click', (e) => {
+        const container = document.getElementById('desktop-more-menu-container');
+        if (container && !container.contains(e.target)) {
+            closeDesktopMoreMenu();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeDesktopMoreMenu();
+        }
+    });
+
+    // -------------------------------------------------------------
+    // Lista de Tareas: Matriz mensual con checks por fecha
+    // -------------------------------------------------------------
+    window.userHasFullAccess = {{ $user->hasFullAccess() ? 'true' : 'false' }};
+    const matrixInFlight = {};
+
+    async function toggleMatrixCheck(buttonEl, taskId) {
+        if (!buttonEl || !taskId) return;
+        if (matrixInFlight[taskId]) return;
+
+        const wasCompleted = buttonEl.getAttribute('data-completed') === 'true';
+        const needsReview = buttonEl.getAttribute('data-needs-review') === 'true';
+        const currentStatus = buttonEl.getAttribute('data-status') || '';
+
+        // Si la tarea está en revisión y el usuario no tiene permisos de aprobación, no puede completarla
+        if (needsReview && currentStatus === 'en_revision' && !window.userHasFullAccess) {
+            showMatrixToast('La tarea está en revisión y requiere aprobación del administrador.', 'info');
+            return;
+        }
+
+        // Si la tarea ya está finalizada y requiere revisión, solo admin puede desmarcarla
+        if (wasCompleted && needsReview && !window.userHasFullAccess) {
+            showMatrixToast('Solo un administrador autorizado puede modificar una tarea aprobada.', 'info');
+            return;
+        }
+
+        matrixInFlight[taskId] = true;
+
+        let targetStatus;
+        if (wasCompleted) {
+            targetStatus = 'no_iniciado';
+        } else {
+            targetStatus = (needsReview && !window.userHasFullAccess) ? 'en_revision' : 'finalizado';
+        }
+
+        const weekBg = buttonEl.getAttribute('data-week-bg') || '';
+        const weekPending = buttonEl.getAttribute('data-week-pending') || '';
+        const rowId = buttonEl.getAttribute('data-row-id');
+
+        // Optimistic UI update solo cuando cambia a finalizado o a no_iniciado
+        if (targetStatus === 'finalizado') {
+            setMatrixButtonVisual(buttonEl, true, weekBg, weekPending);
+            updateRowCounter(rowId, true);
+            updateGlobalMatrixCounter(true);
+        } else if (targetStatus === 'no_iniciado') {
+            setMatrixButtonVisual(buttonEl, false, weekBg, weekPending);
+            updateRowCounter(rowId, false);
+            updateGlobalMatrixCounter(false);
+        }
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        try {
+            const response = await fetch(`/tasks/${taskId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ status: targetStatus })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'No se pudo actualizar el estado de la tarea.');
+            }
+
+            buttonEl.setAttribute('data-status', targetStatus);
+
+            if (targetStatus === 'finalizado') {
+                buttonEl.setAttribute('data-completed', 'true');
+                buttonEl.setAttribute('title', 'Completado (clic para desmarcar)');
+                const actions = document.getElementById(`approval-actions-${taskId}`);
+                if (actions) actions.remove();
+            } else if (targetStatus === 'en_revision') {
+                buttonEl.setAttribute('data-completed', 'false');
+                buttonEl.setAttribute('title', 'En revisión: pendiente de aprobación');
+                buttonEl.disabled = true;
+                buttonEl.classList.add('cursor-not-allowed', 'opacity-75', 'border-dashed', 'border-purple-400', 'dark:border-purple-500', 'bg-purple-50/40', 'dark:bg-purple-950/20', 'text-purple-500');
+                buttonEl.classList.remove('cursor-pointer');
+                let icon = buttonEl.querySelector('i');
+                if (!icon) {
+                    icon = document.createElement('i');
+                    buttonEl.appendChild(icon);
+                }
+                icon.setAttribute('data-lucide', 'clock');
+                icon.className = 'w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2] block';
+                if (window.lucide) lucide.createIcons({ root: buttonEl });
+                showMatrixToast('Tarea enviada a revisión. Pendiente de aprobación del administrador.', 'info');
+            } else {
+                buttonEl.setAttribute('data-completed', 'false');
+                buttonEl.setAttribute('title', 'Pendiente (clic para completar)');
+            }
+
+        } catch (err) {
+            // Revert optimistic UI
+            if (targetStatus === 'finalizado') {
+                setMatrixButtonVisual(buttonEl, false, weekBg, weekPending);
+                updateRowCounter(rowId, false);
+                updateGlobalMatrixCounter(false);
+            } else if (targetStatus === 'no_iniciado') {
+                setMatrixButtonVisual(buttonEl, true, weekBg, weekPending);
+                updateRowCounter(rowId, true);
+                updateGlobalMatrixCounter(true);
+            }
+            showMatrixToast(err.message || 'Error al guardar el cumplimiento.', 'error');
+        } finally {
+            matrixInFlight[taskId] = false;
+        }
+    }
+
+    async function approveMatrixTask(btn, taskId) {
+        if (!btn || !taskId) return;
+        if (matrixInFlight[taskId]) return;
+        matrixInFlight[taskId] = true;
+
+        btn.disabled = true;
+        const actionsContainer = document.getElementById(`approval-actions-${taskId}`);
+        const checkBtn = document.getElementById(`matrix-btn-${taskId}`);
+        const rowId = btn.getAttribute('data-row-id');
+        const weekBg = btn.getAttribute('data-week-bg') || '';
+        const weekPending = btn.getAttribute('data-week-pending') || '';
+
+        if (actionsContainer) {
+            actionsContainer.querySelectorAll('button').forEach(b => b.disabled = true);
+        }
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        try {
+            const response = await fetch(`/tasks/${taskId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ status: 'finalizado' })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'No se pudo aprobar la tarea.');
+            }
+
+            // 1. Quitar botones de aprobación
+            if (actionsContainer) {
+                actionsContainer.remove();
+            }
+
+            // 2. Marcar check como completado y actualizar estado
+            if (checkBtn) {
+                checkBtn.setAttribute('data-completed', 'true');
+                checkBtn.setAttribute('data-status', 'finalizado');
+                checkBtn.setAttribute('title', 'Completado (aprobado)');
+                checkBtn.disabled = false;
+                checkBtn.classList.remove('cursor-not-allowed', 'opacity-75', 'border-dashed', 'border-purple-400', 'dark:border-purple-500', 'bg-purple-50/40', 'dark:bg-purple-950/20', 'text-purple-500');
+                checkBtn.classList.add('cursor-pointer');
+                setMatrixButtonVisual(checkBtn, true, weekBg, weekPending);
+            }
+
+            // 3. Actualizar contadores
+            updateRowCounter(rowId, true);
+            updateGlobalMatrixCounter(true);
+
+            showMatrixToast('Tarea aprobada y finalizada exitosamente.', 'success');
+
+        } catch (err) {
+            if (actionsContainer) {
+                actionsContainer.querySelectorAll('button').forEach(b => b.disabled = false);
+            }
+            showMatrixToast(err.message || 'Error al aprobar la tarea.', 'error');
+        } finally {
+            matrixInFlight[taskId] = false;
+        }
+    }
+
+    async function rejectMatrixTask(btn, taskId) {
+        if (!btn || !taskId) return;
+        if (matrixInFlight[taskId]) return;
+        matrixInFlight[taskId] = true;
+
+        btn.disabled = true;
+        const actionsContainer = document.getElementById(`approval-actions-${taskId}`);
+        const checkBtn = document.getElementById(`matrix-btn-${taskId}`);
+        const rowId = btn.getAttribute('data-row-id');
+        const weekBg = btn.getAttribute('data-week-bg') || '';
+        const weekPending = btn.getAttribute('data-week-pending') || '';
+
+        if (actionsContainer) {
+            actionsContainer.querySelectorAll('button').forEach(b => b.disabled = true);
+        }
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        try {
+            const response = await fetch(`/tasks/${taskId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ status: 'rechazado' })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'No se pudo rechazar la tarea.');
+            }
+
+            // 1. Quitar botones de aprobación
+            if (actionsContainer) {
+                actionsContainer.remove();
+            }
+
+            // 2. Mantener check vacío con estado rechazado
+            if (checkBtn) {
+                checkBtn.setAttribute('data-completed', 'false');
+                checkBtn.setAttribute('data-status', 'rechazado');
+                checkBtn.setAttribute('title', 'Tarea rechazada');
+                checkBtn.disabled = false;
+                checkBtn.classList.remove('cursor-not-allowed', 'opacity-75', 'border-dashed', 'border-purple-400', 'dark:border-purple-500', 'bg-purple-50/40', 'dark:bg-purple-950/20', 'text-purple-500');
+                checkBtn.classList.add('cursor-pointer');
+                setMatrixButtonVisual(checkBtn, false, weekBg, weekPending);
+            }
+
+            showMatrixToast('Tarea rechazada. Permanece sin finalizar.', 'info');
+
+        } catch (err) {
+            if (actionsContainer) {
+                actionsContainer.querySelectorAll('button').forEach(b => b.disabled = false);
+            }
+            showMatrixToast(err.message || 'Error al rechazar la tarea.', 'error');
+        } finally {
+            matrixInFlight[taskId] = false;
+        }
+    }
+
+    function setMatrixButtonVisual(buttonEl, isCompleted, weekBg, weekPending) {
+        let icon = buttonEl.querySelector('i');
+        if (!icon) {
+            icon = document.createElement('i');
+            buttonEl.appendChild(icon);
+        }
+        const weekBgClasses = weekBg.split(' ').filter(Boolean);
+        const weekPendingClasses = weekPending.split(' ').filter(Boolean);
+
+        // Limpiar clases de estado de revisión
+        buttonEl.classList.remove('border-dashed', 'border-purple-400', 'dark:border-purple-500', 'bg-purple-50/40', 'dark:bg-purple-950/20', 'text-purple-500');
+
+        if (isCompleted) {
+            weekPendingClasses.forEach(c => buttonEl.classList.remove(c));
+            buttonEl.classList.remove('text-transparent', 'border-2');
+            weekBgClasses.forEach(c => buttonEl.classList.add(c));
+            buttonEl.classList.add('border');
+            icon.setAttribute('data-lucide', 'check');
+            icon.className = 'w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3] block';
+            if (window.lucide) lucide.createIcons({ root: buttonEl });
+        } else {
+            weekBgClasses.forEach(c => buttonEl.classList.remove(c));
+            buttonEl.classList.remove('border');
+            weekPendingClasses.forEach(c => buttonEl.classList.add(c));
+            buttonEl.classList.add('text-transparent', 'border-2');
+            icon.setAttribute('data-lucide', 'check');
+            icon.className = 'w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3] hidden';
+            if (window.lucide) lucide.createIcons({ root: buttonEl });
+        }
+    }
+
+    function updateRowCounter(rowId, isNowCompleted) {
+        const countEl = document.getElementById(`row-count-${rowId}`);
+        const percentEl = document.getElementById(`row-percent-${rowId}`);
+        if (!countEl || !percentEl) return;
+
+        const parts = countEl.textContent.trim().split('/');
+        if (parts.length !== 2) return;
+
+        let completed = parseInt(parts[0]) || 0;
+        const total = parseInt(parts[1]) || 0;
+
+        if (isNowCompleted) {
+            completed = Math.min(total, completed + 1);
+        } else {
+            completed = Math.max(0, completed - 1);
+        }
+
+        countEl.textContent = `${completed}/${total}`;
+        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+        percentEl.textContent = `${pct}%`;
+    }
+
+    function updateGlobalMatrixCounter(isNowCompleted) {
+        const completedEl = document.getElementById('matrix-global-completed');
+        const percentEl = document.getElementById('matrix-global-percent');
+        const barEl = document.getElementById('matrix-global-bar');
+        const scheduledEl = document.getElementById('matrix-global-scheduled');
+        if (!completedEl || !scheduledEl) return;
+
+        let completed = parseInt(completedEl.textContent) || 0;
+        const total = parseInt(scheduledEl.textContent) || 0;
+
+        if (isNowCompleted) {
+            completed = Math.min(total, completed + 1);
+        } else {
+            completed = Math.max(0, completed - 1);
+        }
+
+        completedEl.textContent = completed;
+        const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+        if (percentEl) percentEl.textContent = `${pct}%`;
+        if (barEl) barEl.style.width = `${pct}%`;
+    }
+
+    function filterMatrixRows() {
+        const input = document.getElementById('matrixTaskSearch');
+        if (!input) return;
+        const term = input.value.toLowerCase().trim();
+        const rows = document.querySelectorAll('.matrix-task-row');
+        let visibleCount = 0;
+
+        rows.forEach(r => {
+            const title = (r.getAttribute('data-task-title') || '').toLowerCase();
+            if (!term || title.includes(term)) {
+                r.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                r.classList.add('hidden');
+            }
+        });
+
+        const noMatchEl = document.getElementById('matrix-no-search-results');
+        if (noMatchEl) {
+            if (visibleCount === 0 && term) {
+                noMatchEl.classList.remove('hidden');
+            } else {
+                noMatchEl.classList.add('hidden');
+            }
+        }
+    }
+
+    function showMatrixToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl text-xs font-semibold transition-all duration-300 transform translate-y-4 opacity-0 ${
+            type === 'error'
+                ? 'bg-red-600 text-white shadow-red-500/20'
+                : 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-slate-900/20'
+        }`;
+        toast.innerHTML = `
+            <i data-lucide="${type === 'error' ? 'alert-circle' : 'check-circle'}" class="w-4 h-4 shrink-0"></i>
+            <span>${escapeHtml(message)}</span>
+        `;
+        document.body.appendChild(toast);
+        if (window.lucide) lucide.createIcons({ root: toast });
+
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-y-4', 'opacity-0');
+        });
+
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
+    }
+
     function toggleMoreMobileMenu() {
         const menu = document.getElementById('mobile-more-menu');
         if (!menu) return;
@@ -3039,7 +3970,7 @@
             document.getElementById('task_title').value = task.title || '';
             document.getElementById('task_description').value = task.description || '';
             document.getElementById('task_module_id').value = task.module_id || '';
-            document.getElementById('task_priority').value = task.priority || 'media';
+            document.getElementById('task_priority').value = (task.priority === 'urgente' ? 'alta' : (task.priority || 'media'));
             document.getElementById('task_status').value = task.status || 'no_iniciado';
             document.getElementById('task_start_date').value = task.start_date || '';
             document.getElementById('task_start_time').value = task.start_time || '';
@@ -3076,7 +4007,14 @@
         }
 
         openModal('taskModal');
-        if (window.lucide) lucide.createIcons();
+        if (window.lucide) {
+            const taskModalEl = document.getElementById('taskModal');
+            if (taskModalEl) {
+                lucide.createIcons({ root: taskModalEl });
+            } else {
+                lucide.createIcons();
+            }
+        }
     }
 
     // ---- Task Comments Modal & AJAX ----
@@ -3702,7 +4640,7 @@
             document.getElementById('rec_title').value = rule.title || '';
             document.getElementById('rec_description').value = rule.description || '';
             document.getElementById('rec_recurrence').value = rule.recurrence || 'diaria';
-            document.getElementById('rec_priority').value = rule.priority || 'media';
+            document.getElementById('rec_priority').value = (rule.priority === 'urgente' ? 'alta' : (rule.priority || 'media'));
             document.getElementById('rec_module_id').value = rule.module_id || '';
             document.getElementById('rec_start_date').value = rule.start_date || '';
             document.getElementById('rec_start_time').value = rule.start_time || '';
@@ -3807,7 +4745,7 @@
                 if (split) {
                     window.calendarInstance.setOption('aspectRatio', 1.35);
                 } else {
-                    window.calendarInstance.setOption('aspectRatio', window.innerWidth >= 1280 ? 1.55 : 1.4);
+                    window.calendarInstance.setOption('aspectRatio', window.innerWidth >= 1280 ? 1.25 : 1.18);
                 }
                 window.calendarInstance.updateSize();
                 window.calendarInstance.render();
@@ -3827,6 +4765,190 @@
         });
     }
 
+    // Helper para convertir HEX a RGBA con opacidad personalizada
+    function hexToRgba(hex, alpha) {
+        if (!hex || typeof hex !== 'string') return `rgba(100, 116, 139, ${alpha !== undefined ? alpha : 0.12})`;
+        let clean = hex.trim().replace('#', '');
+        if (clean.length === 3) {
+            clean = clean.split('').map(c => c + c).join('');
+        }
+        if (clean.length !== 6) return `rgba(100, 116, 139, ${alpha !== undefined ? alpha : 0.12})`;
+        const r = parseInt(clean.substring(0, 2), 16);
+        const g = parseInt(clean.substring(2, 4), 16);
+        const b = parseInt(clean.substring(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha !== undefined ? alpha : 0.12})`;
+    }
+
+    // Eventos de calendario procesados
+    const allCalendarEvents = [
+        @foreach($tasks as $t)
+            @if($t->start_date)
+                @php
+                    $statusKey = $t->status ?? 'no_iniciado';
+                    $calEventColor = $estadoColores[$statusKey] ?? '#64748b';
+                    if ($statusKey === 'no_iniciado' && $t->isOverdue()) {
+                        $calEventColor = '#ef4444';
+                    }
+
+                    $prioRaw = strtolower(trim($t->priority ?? 'media'));
+                    if ($prioRaw === 'urgente') { $prioRaw = 'alta'; }
+                    if (!in_array($prioRaw, ['baja', 'media', 'alta'])) {
+                        $prioRaw = 'media';
+                    }
+                    $prioColor = $prioridadColores[$prioRaw] ?? '#f59e0b';
+                    $prioLabel = $prioridadNombres[$prioRaw] ?? ucfirst($prioRaw);
+
+                    $recRaw = strtolower(trim($t->recurrence ?? ''));
+                    $isPeriodic = !empty($recRaw) && $recRaw !== 'ninguna' && in_array($recRaw, ['diaria', 'semanal', 'mensual', 'anual']);
+                    $recColor = $isPeriodic ? ($periodicidadColores[$recRaw] ?? '#3b82f6') : '';
+                    $recLabel = $isPeriodic ? ($periodicidadNombres[$recRaw] ?? ucfirst($recRaw)) : '';
+
+                    $assignedIds = $t->assignedUsers->pluck('id')->all();
+                @endphp
+                {
+                    id: '{{ $t->id }}',
+                    title: @json($t->title),
+                    start: '{{ \Carbon\Carbon::parse($t->start_date)->format('Y-m-d') }}',
+                    allDay: true,
+                    backgroundColor: 'transparent',
+                    borderColor: 'transparent',
+                    extendedProps: {
+                        status: '{{ $statusKey }}',
+                        statusColor: '{{ $calEventColor }}',
+                        priority: '{{ $prioRaw }}',
+                        priorityLabel: '{{ $prioLabel }}',
+                        priorityColor: '{{ $prioColor }}',
+                        isPeriodic: {{ $isPeriodic ? 'true' : 'false' }},
+                        recurrence: '{{ $recRaw }}',
+                        recurrenceLabel: '{{ $recLabel }}',
+                        recurrenceColor: '{{ $recColor }}',
+                        assignedUserIds: @json($assignedIds)
+                    }
+                },
+            @endif
+        @endforeach
+    ];
+
+    let currentFilteredUserId = '{{ $selectedUserId ?? '' }}';
+
+    function getFilteredEvents(userId) {
+        if (!userId) return allCalendarEvents;
+        const uid = Number(userId);
+        return allCalendarEvents.filter(e => {
+            const uids = (e.extendedProps && e.extendedProps.assignedUserIds) ? e.extendedProps.assignedUserIds.map(Number) : [];
+            return uids.includes(uid);
+        });
+    }
+
+    const todayTasksUsers = @json($todayTasks->map(fn($t) => ['id' => $t->id, 'users' => $t->assignedUsers->pluck('id')->all()]));
+    const monthTasksUsers = @json($monthTasks->map(fn($t) => ['id' => $t->id, 'users' => $t->assignedUsers->pluck('id')->all()]));
+
+    function filterTaskListByUser(userId) {
+        const cards = document.querySelectorAll('.task-list-card');
+        const emptyMsg = document.getElementById('cal-list-empty-user');
+        const groups = document.querySelectorAll('.task-date-group');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            let assigned = [];
+            try {
+                assigned = JSON.parse(card.getAttribute('data-assigned-users') || '[]');
+            } catch(e) {}
+
+            const matches = !userId || assigned.map(Number).includes(Number(userId));
+            if (matches) {
+                card.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+
+        // Actualizar grupos por fecha
+        groups.forEach(group => {
+            const groupCards = group.querySelectorAll('.task-list-card:not(.hidden)');
+            const countBadge = group.querySelector('.task-group-count');
+            if (groupCards.length === 0) {
+                group.classList.add('hidden');
+            } else {
+                group.classList.remove('hidden');
+                if (countBadge) {
+                    countBadge.textContent = groupCards.length + ' tarea(s)';
+                }
+            }
+        });
+
+        if (emptyMsg) {
+            if (cards.length > 0 && visibleCount === 0) {
+                emptyMsg.classList.remove('hidden');
+            } else {
+                emptyMsg.classList.add('hidden');
+            }
+        }
+
+        updateTabCountsForUser(userId);
+        syncCalendarListHeight();
+    }
+
+    function updateTabCountsForUser(userId) {
+        const todayBadge = document.getElementById('badge-count-today');
+        const monthBadge = document.getElementById('badge-count-month');
+
+        const countToday = userId
+            ? todayTasksUsers.filter(t => t.users.map(Number).includes(Number(userId))).length
+            : todayTasksUsers.length;
+        const countMonth = userId
+            ? monthTasksUsers.filter(t => t.users.map(Number).includes(Number(userId))).length
+            : monthTasksUsers.length;
+
+        if (todayBadge) todayBadge.textContent = countToday;
+        if (monthBadge) monthBadge.textContent = countMonth;
+
+        ['tab-tasks-today', 'tab-tasks-month'].forEach(tabId => {
+            const tabEl = document.getElementById(tabId);
+            if (tabEl) {
+                const url = new URL(tabEl.href, window.location.origin);
+                if (userId) {
+                    url.searchParams.set('user_id', userId);
+                } else {
+                    url.searchParams.delete('user_id');
+                }
+                tabEl.href = url.pathname + url.search;
+            }
+        });
+    }
+
+    function onUserFilterChange(userId) {
+        currentFilteredUserId = userId ? String(userId) : '';
+
+        // Mantener sincronizados ambos selectores (normal y modal)
+        const f1 = document.getElementById('calendar-user-filter');
+        const f2 = document.getElementById('calendar-modal-user-filter');
+        if (f1 && f1.value !== currentFilteredUserId) f1.value = currentFilteredUserId;
+        if (f2 && f2.value !== currentFilteredUserId) f2.value = currentFilteredUserId;
+
+        // 1. Actualizar eventos de FullCalendar sin duplicar ni crear instancias adicionales
+        if (window.calendarInstance) {
+            window.calendarInstance.removeAllEvents();
+            const newEvents = getFilteredEvents(currentFilteredUserId);
+            window.calendarInstance.addEventSource(newEvents);
+        }
+
+        // 2. Aplicar filtro a la lista de tareas del proyecto
+        filterTaskListByUser(currentFilteredUserId);
+
+        // 3. Sincronizar parámetro URL sin recargar la página
+        try {
+            const url = new URL(window.location);
+            if (currentFilteredUserId) {
+                url.searchParams.set('user_id', currentFilteredUserId);
+            } else {
+                url.searchParams.delete('user_id');
+            }
+            window.history.replaceState({}, '', url);
+        } catch(e) {}
+    }
+
     // FullCalendar Initialization
     document.addEventListener('DOMContentLoaded', () => {
         const calendarEl = document.getElementById('calendar-container');
@@ -3836,24 +4958,66 @@
                 initialView: 'dayGridMonth',
                 locale: 'es',
                 height: 'auto',
-                aspectRatio: isInitialSplit ? 1.35 : (window.innerWidth >= 1280 ? 1.55 : 1.4),
+                aspectRatio: isInitialSplit ? 1.35 : (window.innerWidth >= 1280 ? 1.25 : 1.18),
                 firstDay: 1,
                 selectable: true,
+                dayMaxEvents: false,
                 displayEventTime: false,
-                events: [
-                    @foreach($tasks as $t)
-                        @if($t->start_date && $t->recurrence !== 'diaria')
-                            {
-                                id: '{{ $t->id }}',
-                                title: '{{ addslashes($t->title) }}',
-                                start: '{{ \Carbon\Carbon::parse($t->start_date)->format('Y-m-d') }}',
-                                allDay: true,
-                                backgroundColor: '{{ $t->status === "finalizado" ? "#10b981" : ($t->isOverdue() ? "#ef4444" : ($t->status === "en_proceso" ? "#f59e0b" : "#6366f1")) }}',
-                                borderColor: 'transparent'
-                            },
-                        @endif
-                    @endforeach
-                ],
+                events: getFilteredEvents(currentFilteredUserId),
+
+                eventContent: function(arg) {
+                    const props = arg.event.extendedProps || {};
+                    const statusColor = props.statusColor || '#64748b';
+                    const prioLabel = props.priorityLabel || 'Media';
+                    const prioColor = props.priorityColor || '#f59e0b';
+                    const isPeriodic = !!props.isPeriodic;
+                    const recurrence = (props.recurrence || '').toLowerCase().trim();
+                    const recLabel = props.recurrenceLabel || '';
+                    const recColor = props.recurrenceColor || '#3b82f6';
+                    const title = arg.event.title || '(Sin título)';
+
+                    const isDark = document.documentElement.classList.contains('dark');
+                    const bgAlpha = isDark ? 0.20 : 0.10;
+                    const borderAlpha = isDark ? 0.35 : 0.22;
+                    const badgeBgAlpha = isDark ? 0.22 : 0.14;
+                    const badgeBorderAlpha = isDark ? 0.40 : 0.28;
+
+                    const bgSoft = hexToRgba(statusColor, bgAlpha);
+                    const borderSoft = hexToRgba(statusColor, borderAlpha);
+
+                    const prioBadgeBg = hexToRgba(prioColor, badgeBgAlpha);
+                    const prioBadgeBorder = hexToRgba(prioColor, badgeBorderAlpha);
+                    const prioBadge = `<span class="cal-badge" style="background-color: ${prioBadgeBg}; color: ${prioColor}; border: 1px solid ${prioBadgeBorder};">${escapeHtml(prioLabel)}</span>`;
+
+                    // Visualización de periodicidad:
+                    // - Diaria: NO mostrar etiqueta
+                    // - Semanal: mostrar «Semanal»
+                    // - Mensual: mostrar «Mensual»
+                    // - Anual: mostrar «Anual»
+                    let recBadge = '';
+                    if (isPeriodic && recLabel && recurrence !== 'diaria') {
+                        let displayRecLabel = recLabel;
+                        if (recurrence === 'semanal') displayRecLabel = 'Semanal';
+                        else if (recurrence === 'mensual') displayRecLabel = 'Mensual';
+                        else if (recurrence === 'anual') displayRecLabel = 'Anual';
+
+                        const recBadgeBg = hexToRgba(recColor, badgeBgAlpha);
+                        const recBadgeBorder = hexToRgba(recColor, badgeBorderAlpha);
+                        recBadge = `<span class="cal-badge" style="background-color: ${recBadgeBg}; color: ${recColor}; border: 1px solid ${recBadgeBorder};">${escapeHtml(displayRecLabel)}</span>`;
+                    }
+
+                    const cardHtml = `
+                        <div class="cal-event-card" style="background-color: ${bgSoft}; border: 1px solid ${borderSoft}; border-left: 4px solid ${statusColor};">
+                            <div class="cal-event-title" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
+                            <div class="cal-event-badges">
+                                ${prioBadge}
+                                ${recBadge}
+                            </div>
+                        </div>
+                    `;
+
+                    return { html: cardHtml };
+                },
 
                 datesSet: function() {
                     syncCalendarListHeight();
@@ -3873,6 +5037,9 @@
             });
             window.calendarInstance.render();
             applyCalendarViewMode(isInitialSplit);
+            if (currentFilteredUserId) {
+                filterTaskListByUser(currentFilteredUserId);
+            }
 
             window.addEventListener('theme-toggled', () => {
                 if (window.calendarInstance) {
@@ -3886,6 +5053,8 @@
                 if (window.ResizeObserver) {
                     let lastCalWidth = 0;
                     new ResizeObserver((entries) => {
+                        const taskModalEl = document.getElementById('taskModal');
+                        if (taskModalEl && !taskModalEl.classList.contains('hidden')) return;
                         syncCalendarListHeight();
                         for (const entry of entries) {
                             const currentWidth = Math.round(entry.contentRect.width);
@@ -3893,7 +5062,7 @@
                                 lastCalWidth = currentWidth;
                                 if (window.calendarInstance && (!document.getElementById('calendarModal') || document.getElementById('calendarModal').classList.contains('hidden'))) {
                                     const isSplit = isCalendarSplitMode();
-                                    window.calendarInstance.setOption('aspectRatio', isSplit ? 1.35 : (window.innerWidth >= 1280 ? 1.55 : 1.4));
+                                    window.calendarInstance.setOption('aspectRatio', isSplit ? 1.35 : (window.innerWidth >= 1280 ? 1.25 : 1.18));
                                     window.calendarInstance.updateSize();
                                     window.calendarInstance.render();
                                 }
@@ -3902,10 +5071,12 @@
                     }).observe(calCard);
                 }
                 window.addEventListener('resize', () => {
+                    const taskModalEl = document.getElementById('taskModal');
+                    if (taskModalEl && !taskModalEl.classList.contains('hidden')) return;
                     syncCalendarListHeight();
                     if (window.calendarInstance && (!document.getElementById('calendarModal') || document.getElementById('calendarModal').classList.contains('hidden'))) {
                         const isSplit = isCalendarSplitMode();
-                        window.calendarInstance.setOption('aspectRatio', isSplit ? 1.35 : (window.innerWidth >= 1280 ? 1.55 : 1.4));
+                        window.calendarInstance.setOption('aspectRatio', isSplit ? 1.35 : (window.innerWidth >= 1280 ? 1.25 : 1.18));
                         window.calendarInstance.updateSize();
                         window.calendarInstance.render();
                     }
@@ -4086,6 +5257,20 @@
         sessionStorage.setItem('inc_mobile_active_col', status);
     }
 
+    // Guardar la vista activa actual en localStorage para el botón de regreso de Configuración
+    window.saveSettingsReturnView = function() {
+        try {
+            const currentActiveView = '{{ $activeView }}';
+            if (currentActiveView && currentActiveView !== 'configuracion') {
+                localStorage.setItem('settingsReturnView', currentActiveView);
+                localStorage.setItem('settingsReturnUrl', window.location.href);
+            }
+        } catch (e) {
+            console.error('Error al guardar settingsReturnView:', e);
+        }
+    };
+    saveSettingsReturnView();
+
     // Initialize Mobile Sub-nav states on load
     document.addEventListener('DOMContentLoaded', () => {
         if (window.lucide) {
@@ -4114,6 +5299,18 @@
 </script>
 
 <style>
+/* Optimización de rendimiento para selects en el modal Agregar Tarea */
+#taskModal {
+    will-change: opacity;
+}
+#taskModal .task-modal-card {
+    contain: layout style;
+}
+#taskModal select {
+    color-scheme: light dark;
+    transition: none !important;
+}
+
 /* Fila inferior de tarea: oculta completamente sin reservar espacio en escritorio, expandible en hover */
 @media (hover: hover) and (pointer: fine) and (min-width: 768px) {
     .task-bottom-row-expandable {
@@ -4157,7 +5354,79 @@
 }
 
 #cal-view-calendar.cal-view-full #calendar-container {
-    min-height: 580px;
+    min-height: 680px;
+}
+
+/* Renderizado personalizado de tarjetas de eventos en FullCalendar */
+.fc .fc-daygrid-day-events {
+    margin-bottom: 2px;
+}
+.fc .fc-daygrid-event-harness {
+    margin-bottom: 4px;
+}
+.fc .fc-daygrid-event {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 1px 2px !important;
+    box-shadow: none !important;
+    white-space: normal !important;
+}
+.fc .fc-daygrid-event:hover {
+    background: transparent !important;
+}
+.fc .fc-event-main {
+    padding: 0 !important;
+    width: 100%;
+}
+.cal-event-card {
+    position: relative;
+    width: 100%;
+    border-radius: 0 8px 8px 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    padding: 5px 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    cursor: pointer;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+.cal-event-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+}
+.cal-event-title {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #1e293b;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
+.dark .cal-event-title {
+    color: #f8fafc;
+}
+.cal-event-badges {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+.cal-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 9.5px;
+    font-weight: 700;
+    line-height: 1.15;
+    padding: 1.5px 5.5px;
+    border-radius: 5px;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
 }
 
 @media (max-width: 1023px) {
@@ -4170,6 +5439,21 @@
     .incident-col-mobile-hidden {
         display: none !important;
     }
+}
+
+/* Menú desplegable «Más» en navegación superior: Opción CheckList en modo claro */
+html:not(.dark) #desktop-more-dropdown a {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+}
+html:not(.dark) #desktop-more-dropdown a:hover {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+}
+html:not(.dark) #desktop-more-dropdown a span {
+    color: #000000 !important;
+    font-weight: 700 !important;
 }
 </style>
 @endpush

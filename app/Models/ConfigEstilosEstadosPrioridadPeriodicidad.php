@@ -14,6 +14,7 @@ class ConfigEstilosEstadosPrioridadPeriodicidad extends Model
     protected $fillable = [
         'nombre',
         'color',
+        'ruta_icono',
         'clave',
         'tipo',
     ];

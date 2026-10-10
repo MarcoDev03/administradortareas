@@ -72,6 +72,9 @@ Route::middleware('auth')->group(function () {
     // Configuración
     Route::get('/configuracion', [ConfigController::class, 'index'])->name('config.index');
     Route::put('/configuracion/estados', [ConfigController::class, 'update'])->name('config.estados.update');
+    Route::put('/configuracion/prioridades', [ConfigController::class, 'updatePrioridades'])->name('config.prioridades.update');
+    Route::put('/configuracion/periodicidades', [ConfigController::class, 'updatePeriodicidades'])->name('config.periodicidades.update');
+    Route::delete('/configuracion/icono/{id}', [ConfigController::class, 'destroyIcon'])->name('config.icono.destroy');
 });
 
 // Ruta pública informativa y de instalación PWA
