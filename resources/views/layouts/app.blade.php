@@ -96,6 +96,8 @@
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                         margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             will-change: transform, margin-left;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
 
         #sidebar .border-b,

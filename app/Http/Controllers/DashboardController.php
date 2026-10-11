@@ -46,7 +46,7 @@ class DashboardController extends Controller
         }
 
         // Tareas según rol y proyecto activo (TODAS — para el calendario y como base)
-        $tasksQuery = Task::with(['project', 'module', 'assignedUsers', 'subtasks', 'creator'])->withCount('comments');
+        $tasksQuery = Task::with(['project', 'module', 'assignedUsers', 'subtasks', 'creator', 'recurringTask'])->withCount('comments');
 
         if ($activeProject) {
             $tasksQuery->where('project_id', $activeProject->id);

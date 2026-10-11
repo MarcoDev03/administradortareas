@@ -121,4 +121,24 @@ class Task extends Model
 
         return false;
     }
+
+    /**
+     * Determina si la tarea corresponde a una tarea periódica de frecuencia diaria
+     */
+    public function isDailyRecurring(): bool
+    {
+        $rec = strtolower(trim($this->recurrence ?? ''));
+        if ($rec === 'diaria') {
+            return true;
+        }
+
+        if ($this->recurring_task_id) {
+            $ruleRec = optional($this->recurringTask)->recurrence;
+            if ($ruleRec && strtolower(trim($ruleRec)) === 'diaria') {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

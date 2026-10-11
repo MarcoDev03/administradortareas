@@ -59,10 +59,10 @@
 @endphp
 
 <!-- Mobile Sidebar Backdrop -->
-<div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-30 hidden md:hidden transition-opacity"></div>
+<div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[45] hidden md:hidden transition-opacity"></div>
 
 <!-- Sidebar Navigation -->
-<aside id="sidebar" class="sidebar-collapsed fixed md:static inset-y-0 left-0 z-40 w-72 max-w-[85vw] bg-[#0b0f19] text-slate-300 border-r border-slate-800/80 flex flex-col transition-all duration-300 transform -translate-x-full md:translate-x-0 shrink-0">
+<aside id="sidebar" class="sidebar-collapsed fixed md:static inset-y-0 left-0 z-50 md:z-40 w-72 max-w-[85vw] bg-[#0b0f19] text-slate-300 border-r border-slate-800/80 flex flex-col transition-all duration-300 transform -translate-x-full md:translate-x-0 shrink-0 h-full max-h-[100dvh] overflow-y-auto md:overflow-hidden overscroll-contain">
     <!-- Inicialización inmediata para evitar parpadeo (Flicker) -->
     <script>
         (function() {
@@ -150,7 +150,7 @@
     </div>
 
     <!-- Projects List -->
-    <div class="flex-1 overflow-y-auto px-3 py-2 space-y-1.5 no-scrollbar">
+    <div class="flex-none md:flex-1 overflow-visible md:overflow-y-auto px-3 py-2 space-y-1.5 no-scrollbar">
         <div class="px-3 py-1 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
             <span>{{ $user->isHelper() ? 'Proyectos Asignados' : 'Tus Proyectos' }}</span>
             <span class="px-1.5 py-0.5 rounded-full bg-slate-800 text-[10px] text-slate-400 font-semibold">{{ $visibleProjects->count() }}</span>
@@ -221,7 +221,7 @@
     </div>
 
     <!-- Sidebar Footer -->
-    <div class="p-3.5 border-t border-slate-800/90 text-xs text-slate-400 flex flex-col items-center space-y-2 shrink-0">
+    <div class="p-3.5 border-t border-slate-800/90 text-xs text-slate-400 flex flex-col items-center space-y-2 shrink-0 pb-safe pb-8 md:pb-3.5">
         <!-- PWA Install Button -->
         <!-- <button id="pwa-install-btn" onclick="triggerPWAInstall()" class="hidden text-indigo-600 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-white transition text-xs font-semibold flex items-center space-x-2 py-2 px-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 border border-indigo-200 dark:border-indigo-500/40 w-full justify-center shadow-xs">
             <i data-lucide="download" class="w-4 h-4 text-indigo-500 dark:text-indigo-400"></i>
@@ -1385,8 +1385,9 @@
                             <!-- Tabs de Filtro: Tareas de Hoy vs Tareas del Mes -->
                             <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs overflow-x-auto no-scrollbar max-w-full">
                                 @php
-                                    $todayVisibleCount = $selectedUserId ? $todayTasks->filter(fn($task) => $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $todayTasks->count();
-                                    $monthVisibleCount = $selectedUserId ? $monthTasks->filter(fn($task) => $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $monthTasks->count();
+                                    $todayVisibleCount = $selectedUserId ? $todayTasks->filter(fn($task) => !$task->isDailyRecurring() && $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $todayTasks->filter(fn($task) => !$task->isDailyRecurring())->count();
+                                    $monthVisibleCount = $selectedUserId ? $monthTasks->filter(fn($task) => !$task->isDailyRecurring() && $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $monthTasks->filter(fn($task) => !$task->isDailyRecurring())->count();
+                                    $calFilteredTasks = $filteredTasks->filter(fn($t) => !$t->isDailyRecurring());
                                 @endphp
                                 <a id="tab-tasks-today" href="{{ route('dashboard', array_filter(['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => $activeView, 'task_filter' => 'hoy', 'user_id' => $selectedUserId])) }}"
                                     class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $taskFilter === 'hoy' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
@@ -1405,14 +1406,14 @@
 
                         <!-- Scrollable Tasks Container -->
                         <div class="flex-1 min-h-0 overflow-y-auto pr-1.5 space-y-4 max-h-[640px] lg:max-h-none">
-                        @if($filteredTasks->isEmpty())
+                        @if($calFilteredTasks->isEmpty())
                             <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
                                 {{ $taskFilter === 'mes' ? 'No hay tareas registradas para este mes.' : 'No hay tareas pendientes para hoy.' }}
                             </div>
                         @else
                             @php
                                 if ($taskFilter === 'mes') {
-                                    $groupedTasks = $filteredTasks->sortBy(function($t) {
+                                    $groupedTasks = $calFilteredTasks->sortBy(function($t) {
                                         if ($t->start_date) return \Carbon\Carbon::parse($t->start_date)->timestamp;
                                         if ($t->end_date) return \Carbon\Carbon::parse($t->end_date)->timestamp;
                                         return $t->created_at ? $t->created_at->timestamp : 0;
@@ -1422,7 +1423,7 @@
                                         return $t->created_at ? $t->created_at->format('Y-m-d') : 'sin_fecha';
                                     });
                                 } else {
-                                    $groupedTasks = collect(['todas' => $filteredTasks]);
+                                    $groupedTasks = collect(['todas' => $calFilteredTasks]);
                                 }
                             @endphp
 
@@ -1651,7 +1652,7 @@
                             </div>
 
                             @php
-                                $totalVisibleTasks = $selectedUserId ? $filteredTasks->filter(fn($task) => $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $filteredTasks->count();
+                                $totalVisibleTasks = $selectedUserId ? $calFilteredTasks->filter(fn($task) => $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $calFilteredTasks->count();
                             @endphp
                             <div id="cal-list-empty-user" class="{{ $totalVisibleTasks === 0 ? '' : 'hidden' }} text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
                                 No hay tareas asignadas a este usuario para este período.
@@ -4779,10 +4780,10 @@
         return `rgba(${r}, ${g}, ${b}, ${alpha !== undefined ? alpha : 0.12})`;
     }
 
-    // Eventos de calendario procesados
+    // Eventos de calendario procesados (excluyendo tareas periódicas diarias)
     const allCalendarEvents = [
         @foreach($tasks as $t)
-            @if($t->start_date)
+            @if($t->start_date && !$t->isDailyRecurring())
                 @php
                     $statusKey = $t->status ?? 'no_iniciado';
                     $calEventColor = $estadoColores[$statusKey] ?? '#64748b';
@@ -4840,8 +4841,8 @@
         });
     }
 
-    const todayTasksUsers = @json($todayTasks->map(fn($t) => ['id' => $t->id, 'users' => $t->assignedUsers->pluck('id')->all()]));
-    const monthTasksUsers = @json($monthTasks->map(fn($t) => ['id' => $t->id, 'users' => $t->assignedUsers->pluck('id')->all()]));
+    const todayTasksUsers = @json($todayTasks->filter(fn($t) => !$t->isDailyRecurring())->map(fn($t) => ['id' => $t->id, 'users' => $t->assignedUsers->pluck('id')->all()]));
+    const monthTasksUsers = @json($monthTasks->filter(fn($t) => !$t->isDailyRecurring())->map(fn($t) => ['id' => $t->id, 'users' => $t->assignedUsers->pluck('id')->all()]));
 
     function filterTaskListByUser(userId) {
         const cards = document.querySelectorAll('.task-list-card');
