@@ -141,4 +141,28 @@ class Task extends Model
 
         return false;
     }
+
+    /**
+     * Determina si la fecha programada de la tarea es estrictamente futura.
+     */
+    public function isFutureScheduled(): bool
+    {
+        $todayStr = Carbon::today('America/La_Paz')->toDateString();
+
+        if ($this->start_date) {
+            $sStr = $this->start_date instanceof \DateTimeInterface
+                ? $this->start_date->format('Y-m-d')
+                : substr((string)$this->start_date, 0, 10);
+            return $sStr > $todayStr;
+        }
+
+        if ($this->end_date) {
+            $eStr = $this->end_date instanceof \DateTimeInterface
+                ? $this->end_date->format('Y-m-d')
+                : substr((string)$this->end_date, 0, 10);
+            return $eStr > $todayStr;
+        }
+
+        return false;
+    }
 }

@@ -23,7 +23,7 @@ class TaskCommentController extends Controller
                     'user_role' => $c->user ? $c->user->role : '',
                     'comment' => $c->comment,
                     'created_at' => $c->created_at ? $c->created_at->diffForHumans() : '',
-                    'created_at_formatted' => $c->created_at ? $c->created_at->format('d/m/Y H:i') : '',
+                    'created_at_formatted' => $c->created_at ? $c->created_at->copy()->timezone('America/La_Paz')->format('d/m/Y H:i') : '',
                     'can_delete' => Auth::id() === $c->user_id || Auth::user()->hasFullAccess(),
                 ];
             });
@@ -60,7 +60,7 @@ class TaskCommentController extends Controller
             'user_role' => $comment->user ? $comment->user->role : '',
             'comment' => $comment->comment,
             'created_at' => $comment->created_at ? $comment->created_at->diffForHumans() : '',
-            'created_at_formatted' => $comment->created_at ? $comment->created_at->format('d/m/Y H:i') : '',
+            'created_at_formatted' => $comment->created_at ? $comment->created_at->copy()->timezone('America/La_Paz')->format('d/m/Y H:i') : '',
             'can_delete' => true,
         ];
 

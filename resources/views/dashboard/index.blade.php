@@ -4,6 +4,28 @@
 
 @section('content')
 @php
+    $todayBolivia = \Carbon\Carbon::today('America/La_Paz')->toDateString();
+    $todayBoliviaTasks = ($tasks ?? collect())->filter(function ($task) use ($todayBolivia) {
+        if ($task->status === 'finalizado') {
+            return $task->completed_at && $task->completed_at->copy()->timezone('America/La_Paz')->toDateString() === $todayBolivia;
+        }
+        if ($task->isOverdue()) {
+            return true;
+        }
+        $sStr = $task->start_date ? substr((string)$task->start_date, 0, 10) : null;
+        $eStr = $task->end_date ? substr((string)$task->end_date, 0, 10) : null;
+        if ($sStr === $todayBolivia || $eStr === $todayBolivia) {
+            return true;
+        }
+        if (!$task->start_date && !$task->end_date && $task->created_at && $task->created_at->copy()->timezone('America/La_Paz')->toDateString() === $todayBolivia) {
+            return true;
+        }
+        return false;
+    })->values();
+    $todayTasks = $todayBoliviaTasks;
+    if (isset($taskFilter) && $taskFilter === 'hoy') {
+        $filteredTasks = $todayBoliviaTasks;
+    }
     $overdueTasks = $overdueTasks ?? ($tasks ? $tasks->filter(fn($t) => $t->isOverdue()) : collect());
     $overdueCount = $overdueCount ?? $overdueTasks->count();
     $estadoColores = $estadoColores ?? [
@@ -867,9 +889,9 @@
                                         @foreach($filteredTasks as $t)
                                             @php
                                                 $isTodayTask = $t->status !== 'finalizado' && !$t->isOverdue() && (
-                                                    ($t->start_date && \Carbon\Carbon::parse($t->start_date)->isToday()) ||
-                                                    ($t->end_date && \Carbon\Carbon::parse($t->end_date)->isToday()) ||
-                                                    (!$t->start_date && !$t->end_date && $t->created_at && $t->created_at->isToday())
+                                                    ($t->start_date && substr((string)$t->start_date, 0, 10) === $todayBolivia) ||
+                                                    ($t->end_date && substr((string)$t->end_date, 0, 10) === $todayBolivia) ||
+                                                    (!$t->start_date && !$t->end_date && $t->created_at && $t->created_at->copy()->timezone('America/La_Paz')->toDateString() === $todayBolivia)
                                                 );
                                                 $dueDateStr = null;
                                                 if ($t->end_date) {
@@ -893,6 +915,11 @@
                                                                 <span class="w-4 h-4 rounded border border-purple-400 bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center cursor-not-allowed">
                                                                     <i data-lucide="clock" class="w-2.5 h-2.5"></i>
                                                                 </span>
+                                                            </div>
+                                                        @elseif($t->isFutureScheduled())
+                                                            <div class="mt-0.5 shrink-0" title="Tarea programada para una fecha futura: no disponible todavía">
+                                                                <input type="checkbox" disabled
+                                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-0 cursor-not-allowed pointer-events-none">
                                                             </div>
                                                         @elseif($canApproveReject)
                                                             <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="mt-0.5 shrink-0">
@@ -1417,10 +1444,10 @@
                                         if ($t->start_date) return \Carbon\Carbon::parse($t->start_date)->timestamp;
                                         if ($t->end_date) return \Carbon\Carbon::parse($t->end_date)->timestamp;
                                         return $t->created_at ? $t->created_at->timestamp : 0;
-                                    })->groupBy(function($t) {
+                                    })->groupBy(function($t) use ($todayBolivia) {
                                         if ($t->start_date) return \Carbon\Carbon::parse($t->start_date)->format('Y-m-d');
                                         if ($t->end_date) return \Carbon\Carbon::parse($t->end_date)->format('Y-m-d');
-                                        return $t->created_at ? $t->created_at->format('Y-m-d') : 'sin_fecha';
+                                        return $t->created_at ? $t->created_at->copy()->timezone('America/La_Paz')->format('Y-m-d') : 'sin_fecha';
                                     });
                                 } else {
                                     $groupedTasks = collect(['todas' => $calFilteredTasks]);
@@ -1441,7 +1468,7 @@
                                                         Sin Fecha Definida
                                                     @else
                                                         {{ ucfirst(\Carbon\Carbon::parse($dateKey)->locale('es')->isoFormat('dddd D \d\e MMMM, YYYY')) }}
-                                                        @if(\Carbon\Carbon::parse($dateKey)->isToday())
+                                                        @if($dateKey === $todayBolivia)
                                                             <span class="text-[9px] bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.2 rounded ml-1">Hoy</span>
                                                         @endif
                                                     @endif
@@ -1471,6 +1498,11 @@
                                                                     <i data-lucide="clock" class="w-2.5 h-2.5"></i>
                                                                 </span>
                                                             </div>
+                                                        @elseif($t->isFutureScheduled())
+                                                            <div class="mt-0.5 shrink-0" title="Tarea programada para una fecha futura: no disponible todavía">
+                                                                <input type="checkbox" disabled
+                                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-0 cursor-not-allowed pointer-events-none">
+                                                            </div>
                                                         @elseif($canApproveReject)
                                                             <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="mt-0.5 shrink-0">
                                                                 @csrf
@@ -1492,9 +1524,9 @@
                                                         <div class="min-w-0 flex-1">
                                                             @php
                                                                 $isTodayTask = $t->status !== 'finalizado' && !$t->isOverdue() && (
-                                                                    ($t->start_date && \Carbon\Carbon::parse($t->start_date)->isToday()) ||
-                                                                    ($t->end_date && \Carbon\Carbon::parse($t->end_date)->isToday()) ||
-                                                                    (!$t->start_date && !$t->end_date && $t->created_at && $t->created_at->isToday())
+                                                                    ($t->start_date && substr((string)$t->start_date, 0, 10) === $todayBolivia) ||
+                                                                    ($t->end_date && substr((string)$t->end_date, 0, 10) === $todayBolivia) ||
+                                                                    (!$t->start_date && !$t->end_date && $t->created_at && $t->created_at->copy()->timezone('America/La_Paz')->toDateString() === $todayBolivia)
                                                                 );
                                                                 $dueDateStr = null;
                                                                 if ($t->end_date) {
@@ -1715,7 +1747,7 @@
                                                     {{ $t->title }}
                                                     @if($t->isOverdue())
                                                         <span class="text-[9px] bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 font-bold px-1.5 py-0.5 rounded ml-1 uppercase inline-block">Vencida</span>
-                                                    @elseif($t->start_date && \Carbon\Carbon::parse($t->start_date)->isToday())
+                                                    @elseif($t->start_date && substr((string)$t->start_date, 0, 10) === $todayBolivia)
                                                         <span class="text-[9px] bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded ml-1 uppercase inline-block">Para Hoy</span>
                                                     @endif
                                                 </h4>
@@ -1760,7 +1792,7 @@
                                                     @if($t->start_date)
                                                         <span class="text-[10px] bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800/60 px-2 py-0.5 rounded-full font-medium inline-flex items-center space-x-1">
                                                             <i data-lucide="calendar" class="w-3 h-3"></i>
-                                                            <span>{{ $t->start_date }}{{ $t->start_time ? ' '.$t->start_time : '' }}</span>
+                                                            <span>{{ \Carbon\Carbon::parse($t->start_date)->format('d/m/Y') }}{{ $t->start_time ? ' '.substr($t->start_time, 0, 5) : '' }}</span>
                                                         </span>
                                                     @endif
                                                     @if($t->recurrence && $t->recurrence !== 'ninguna')
@@ -1772,7 +1804,7 @@
                                                     @if($t->end_date)
                                                         <span class="text-[10px] bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-800/60 px-2 py-0.5 rounded-full font-medium inline-flex items-center space-x-1">
                                                             <i data-lucide="flag" class="w-3 h-3"></i>
-                                                            <span>{{ $t->end_date }}{{ $t->end_time ? ' '.$t->end_time : '' }}</span>
+                                                            <span>{{ \Carbon\Carbon::parse($t->end_date)->format('d/m/Y') }}{{ $t->end_time ? ' '.substr($t->end_time, 0, 5) : '' }}</span>
                                                         </span>
                                                     @endif
                                                     @if($t->isOverdue())
@@ -1794,7 +1826,7 @@
                                                     @if($t->status === 'finalizado' && $t->completed_at)
                                                         <span class="text-[10px] bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/60 px-2 py-0.5 rounded-full font-medium inline-flex items-center space-x-1">
                                                             <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"></i>
-                                                            <span>Fin: {{ $t->completed_at->format('d/m/Y H:i') }}</span>
+                                                            <span>Fin: {{ $t->completed_at->copy()->timezone('America/La_Paz')->format('d/m/Y H:i') }}</span>
                                                         </span>
                                                     @endif
                                                 </div>
@@ -2136,7 +2168,10 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                             @foreach($trashedTasks as $t)
                                 @php
-                                    $daysRemaining = max(0, 30 - intval(now()->diffInDays($t->deleted_at)));
+                                    $deletedDate = $t->deleted_at ? $t->deleted_at->copy()->timezone('America/La_Paz')->startOfDay() : \Carbon\Carbon::today('America/La_Paz');
+                                    $todayBolivia = \Carbon\Carbon::today('America/La_Paz');
+                                    $daysElapsed = $deletedDate->greaterThan($todayBolivia) ? 0 : (int) $deletedDate->diffInDays($todayBolivia);
+                                    $daysRemaining = max(0, 30 - $daysElapsed);
                                 @endphp
                                 <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft flex flex-col justify-between gap-3 relative transition hover:shadow-card dark:hover:shadow-card-dark">
                                     <div class="space-y-2">
@@ -2156,7 +2191,7 @@
                                             </div>
 
                                             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $daysRemaining <= 5 ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 animate-pulse' : 'bg-amber-50 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300' }}" title="Días restantes antes de eliminación definitiva">
-                                                {{ $daysRemaining }} días restantes
+                                                {{ $daysRemaining }} {{ $daysRemaining === 1 ? 'día restante' : 'días restantes' }}
                                             </span>
                                         </div>
 
@@ -2368,13 +2403,14 @@
                                     @foreach($matrixData['days'] as $d => $dayInfo)
                                         @php
                                             $wTheme = $matrixData['weeks'][$dayInfo['weekIndex']];
+                                            $isMatrixDayToday = ($dayInfo['date'] === $todayBolivia);
                                         @endphp
-                                        <th class="p-1 min-w-[38px] sm:min-w-[42px] text-center border-r border-slate-100 dark:border-slate-800/80 {{ $dayInfo['isToday'] ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : '' }}">
+                                        <th class="p-1 min-w-[38px] sm:min-w-[42px] text-center border-r border-slate-100 dark:border-slate-800/80 {{ $isMatrixDayToday ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : '' }}">
                                             <div class="flex flex-col items-center justify-center py-1">
-                                                <span class="text-[10px] font-semibold lowercase leading-tight {{ $dayInfo['isToday'] ? 'text-indigo-600 dark:text-indigo-400 font-bold' : ($dayInfo['isWeekend'] ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300') }}">
+                                                <span class="text-[10px] font-semibold lowercase leading-tight {{ $isMatrixDayToday ? 'text-indigo-600 dark:text-indigo-400 font-bold' : ($dayInfo['isWeekend'] ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300') }}">
                                                     {{ $dayInfo['dayName'] }}
                                                 </span>
-                                                <span class="text-xs font-bold leading-tight mt-0.5 {{ $dayInfo['isToday'] ? 'w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs' : 'text-slate-800 dark:text-slate-200' }}">
+                                                <span class="text-xs font-bold leading-tight mt-0.5 {{ $isMatrixDayToday ? 'w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs' : 'text-slate-800 dark:text-slate-200' }}">
                                                     {{ $dayInfo['day'] }}
                                                 </span>
                                             </div>
@@ -2423,8 +2459,9 @@
                                             @php
                                                 $cell = $row['cells'][$d] ?? ['scheduled' => false];
                                                 $wTheme = $matrixData['weeks'][$dayInfo['weekIndex']];
+                                                $isMatrixDayToday = ($dayInfo['date'] === $todayBolivia);
                                             @endphp
-                                            <td class="p-1 min-w-[38px] sm:min-w-[42px] text-center align-middle border-r border-slate-100 dark:border-slate-800/60 {{ $dayInfo['isToday'] ? 'bg-indigo-50/20 dark:bg-indigo-950/20' : '' }}">
+                                            <td class="p-1 min-w-[38px] sm:min-w-[42px] text-center align-middle border-r border-slate-100 dark:border-slate-800/60 {{ $isMatrixDayToday ? 'bg-indigo-50/20 dark:bg-indigo-950/20' : '' }}">
                                                 @if($cell['scheduled'])
                                                     <div class="flex flex-col items-center justify-center gap-1 mx-auto py-0.5">
                                                         @if(!empty($cell['can_approve_reject']))
@@ -2456,6 +2493,16 @@
                                                             </div>
                                                         @endif
 
+                                                        @php
+                                                            $isCellFuture = !empty($cell['is_future']);
+                                                            $cellTitle = $cell['is_completed']
+                                                                ? 'Completado en ' . $cell['date'] . ' (clic para desmarcar)'
+                                                                : (!empty($cell['is_pending_approval'])
+                                                                    ? 'En revisión: pendiente de aprobación'
+                                                                    : ($isCellFuture
+                                                                        ? 'Fecha futura (' . $cell['date'] . '): no disponible todavía'
+                                                                        : 'Pendiente en ' . $cell['date'] . ' (clic para completar)'));
+                                                        @endphp
                                                         <button type="button"
                                                             id="matrix-btn-{{ $cell['task_id'] }}"
                                                             onclick="toggleMatrixCheck(this, {{ $cell['task_id'] }})"
@@ -2463,13 +2510,14 @@
                                                             data-completed="{{ $cell['is_completed'] ? 'true' : 'false' }}"
                                                             data-status="{{ $cell['status'] }}"
                                                             data-needs-review="{{ !empty($cell['needs_review']) ? 'true' : 'false' }}"
+                                                            data-is-future="{{ $isCellFuture ? 'true' : 'false' }}"
                                                             data-row-id="{{ $row['id'] }}"
                                                             data-week-bg="{{ $wTheme['checkBg'] }}"
                                                             data-week-pending="{{ $wTheme['checkPending'] }}"
-                                                            class="matrix-check-btn w-6 h-6 sm:w-7 sm:h-7 rounded-md mx-auto flex items-center justify-center transition-all duration-150 transform active:scale-90 focus:outline-none select-none
-                                                            {{ $cell['is_completed'] ? $wTheme['checkBg'] : (!empty($cell['is_pending_approval']) ? 'border-2 border-dashed border-purple-400 dark:border-purple-500 bg-purple-50/40 dark:bg-purple-950/20 text-purple-500' : 'border-2 ' . $wTheme['checkPending'] . ' text-transparent hover:scale-105') }}
-                                                            {{ empty($cell['can_toggle']) ? 'cursor-not-allowed opacity-75' : 'cursor-pointer' }}"
-                                                            title="{{ $cell['is_completed'] ? 'Completado en ' . $cell['date'] . ' (clic para desmarcar)' : (!empty($cell['is_pending_approval']) ? 'En revisión: pendiente de aprobación' : 'Pendiente en ' . $cell['date'] . ' (clic para completar)') }}"
+                                                            class="matrix-check-btn w-6 h-6 sm:w-7 sm:h-7 rounded-md mx-auto flex items-center justify-center transition-all duration-150 transform select-none
+                                                            {{ $cell['is_completed'] ? $wTheme['checkBg'] : (!empty($cell['is_pending_approval']) ? 'border-2 border-dashed border-purple-400 dark:border-purple-500 bg-purple-50/40 dark:bg-purple-950/20 text-purple-500' : 'border-2 ' . $wTheme['checkPending'] . ' text-transparent ' . ($isCellFuture ? '' : 'hover:scale-105 active:scale-90')) }}
+                                                            {{ empty($cell['can_toggle']) ? 'cursor-not-allowed' : 'cursor-pointer' }}"
+                                                            title="{{ $cellTitle }}"
                                                             {{ empty($cell['can_toggle']) ? 'disabled' : '' }}>
                                                             @if($cell['is_completed'])
                                                                 <i data-lucide="check" class="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3] block"></i>
@@ -3319,6 +3367,27 @@
 
 @push('scripts')
 <script>
+    // Utilidad centralizada para obtener la fecha actual en la zona horaria de Bolivia (America/La_Paz)
+    function getBoliviaTodayString() {
+        try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/La_Paz',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).formatToParts(new Date());
+            const y = parts.find(p => p.type === 'year')?.value;
+            const m = parts.find(p => p.type === 'month')?.value;
+            const d = parts.find(p => p.type === 'day')?.value;
+            if (y && m && d) return `${y}-${m}-${d}`;
+        } catch (e) {}
+        const local = new Date();
+        const y = local.getFullYear();
+        const m = String(local.getMonth() + 1).padStart(2, '0');
+        const d = String(local.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
     function initSidebarState() {
         if (window.innerWidth >= 768) {
             const sidebar = document.getElementById('sidebar');
@@ -3457,7 +3526,14 @@
 
         const wasCompleted = buttonEl.getAttribute('data-completed') === 'true';
         const needsReview = buttonEl.getAttribute('data-needs-review') === 'true';
+        const isFuture = buttonEl.getAttribute('data-is-future') === 'true';
         const currentStatus = buttonEl.getAttribute('data-status') || '';
+
+        // Bloquear checks de tareas cuya fecha programada todavía no ha llegado
+        if (isFuture) {
+            showMatrixToast('Esta tarea está programada para una fecha futura y aún no puede marcarse.', 'info');
+            return;
+        }
 
         // Si la tarea está en revisión y el usuario no tiene permisos de aprobación, no puede completarla
         if (needsReview && currentStatus === 'en_revision' && !window.userHasFullAccess) {
@@ -3973,13 +4049,13 @@
             document.getElementById('task_module_id').value = task.module_id || '';
             document.getElementById('task_priority').value = (task.priority === 'urgente' ? 'alta' : (task.priority || 'media'));
             document.getElementById('task_status').value = task.status || 'no_iniciado';
-            document.getElementById('task_start_date').value = task.start_date || '';
-            document.getElementById('task_start_time').value = task.start_time || '';
+            document.getElementById('task_start_date').value = task.start_date ? String(task.start_date).substring(0, 10) : '';
+            document.getElementById('task_start_time').value = task.start_time ? String(task.start_time).substring(0, 5) : '';
             document.getElementById('task_needs_review').checked = !!task.needs_review;
 
             if (task.end_date) {
-                document.getElementById('task_end_date').value = task.end_date;
-                document.getElementById('task_end_time').value = task.end_time || '';
+                document.getElementById('task_end_date').value = String(task.end_date).substring(0, 10);
+                document.getElementById('task_end_time').value = task.end_time ? String(task.end_time).substring(0, 5) : '';
                 showEndDate();
             }
 
@@ -4002,7 +4078,7 @@
             titleHeading.textContent = 'Nueva Tarea';
             form.reset();
             document.getElementById('task_status').value = initialStatus || 'no_iniciado';
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = getBoliviaTodayString();
             document.getElementById('task_start_date').value = defaultStartDate || todayStr;
             renderSubtasks();
         }
@@ -4643,9 +4719,9 @@
             document.getElementById('rec_recurrence').value = rule.recurrence || 'diaria';
             document.getElementById('rec_priority').value = (rule.priority === 'urgente' ? 'alta' : (rule.priority || 'media'));
             document.getElementById('rec_module_id').value = rule.module_id || '';
-            document.getElementById('rec_start_date').value = rule.start_date || '';
-            document.getElementById('rec_start_time').value = rule.start_time || '';
-            document.getElementById('rec_end_time').value = rule.end_time || '';
+            document.getElementById('rec_start_date').value = rule.start_date ? String(rule.start_date).substring(0, 10) : '';
+            document.getElementById('rec_start_time').value = rule.start_time ? String(rule.start_time).substring(0, 5) : '';
+            document.getElementById('rec_end_time').value = rule.end_time ? String(rule.end_time).substring(0, 5) : '';
             document.getElementById('rec_needs_review').checked = !!rule.needs_review;
 
             const assignedIds = (rule.assigned_users || rule.assignedUsers || []).map(u => typeof u === 'object' ? u.id : parseInt(u));
@@ -4660,7 +4736,7 @@
             methodInput.value = 'POST';
             titleHeading.innerHTML = '<i data-lucide="repeat" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i><span>Nueva Tarea Periódica</span>';
             form.reset();
-            document.getElementById('rec_start_date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('rec_start_date').value = getBoliviaTodayString();
             renderRecSubtasks();
         }
 

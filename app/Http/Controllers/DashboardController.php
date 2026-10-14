@@ -555,9 +555,13 @@ class DashboardController extends Controller
                     $isPendingApproval = ($needsReview && $inst->status === 'en_revision');
                     $canApproveReject = ($isPendingApproval && $user->hasFullAccess());
                     $isHelperRestricted = ($isPendingApproval && !$user->hasFullAccess());
+                    $todayStr = Carbon::today('America/La_Paz')->toDateString();
+                    $isFuture = ($dateStr > $todayStr);
 
                     $canToggle = true;
-                    if ($isPendingApproval) {
+                    if ($isFuture) {
+                        $canToggle = false;
+                    } elseif ($isPendingApproval) {
                         $canToggle = false;
                     } elseif ($isDone && $needsReview && !$user->hasFullAccess()) {
                         $canToggle = false;
@@ -572,6 +576,7 @@ class DashboardController extends Controller
                         'is_pending_approval' => $isPendingApproval,
                         'can_approve_reject' => $canApproveReject,
                         'is_helper_restricted' => $isHelperRestricted,
+                        'is_future' => $isFuture,
                         'date' => $dateStr,
                         'day' => $d,
                         'weekIndex' => $wIdx,
@@ -649,9 +654,13 @@ class DashboardController extends Controller
                     $isPendingApproval = ($needsReview && $task->status === 'en_revision');
                     $canApproveReject = ($isPendingApproval && $user->hasFullAccess());
                     $isHelperRestricted = ($isPendingApproval && !$user->hasFullAccess());
+                    $todayStr = Carbon::today('America/La_Paz')->toDateString();
+                    $isFuture = ($dateStr > $todayStr);
 
                     $canToggle = true;
-                    if ($isPendingApproval) {
+                    if ($isFuture) {
+                        $canToggle = false;
+                    } elseif ($isPendingApproval) {
                         $canToggle = false;
                     } elseif ($isDone && $needsReview && !$user->hasFullAccess()) {
                         $canToggle = false;
@@ -666,6 +675,7 @@ class DashboardController extends Controller
                         'is_pending_approval' => $isPendingApproval,
                         'can_approve_reject' => $canApproveReject,
                         'is_helper_restricted' => $isHelperRestricted,
+                        'is_future' => $isFuture,
                         'date' => $dateStr,
                         'day' => $d,
                         'weekIndex' => $wIdx,

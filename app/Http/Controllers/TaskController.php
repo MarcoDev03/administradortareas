@@ -233,6 +233,15 @@ class TaskController extends Controller
         $user = Auth::user();
         $newStatus = $request->status;
 
+        // Reglas de tareas con fecha futura: no se pueden marcar por adelantado
+        if ($task->isFutureScheduled() && in_array($newStatus, ['finalizado', 'en_revision'])) {
+            $msg = 'No se puede marcar una tarea cuya fecha programada aún no ha llegado.';
+            if ($request->wantsJson()) {
+                return response()->json(['error' => $msg], 422);
+            }
+            return back()->with('error', $msg);
+        }
+
         // Reglas de revisión según rol
         if ($task->needs_review && !$user->hasFullAccess()) {
             if ($task->status === 'en_revision' && $newStatus !== 'en_revision') {
