@@ -67,6 +67,9 @@ class DashboardController extends Controller
 
         $tasks = $tasksQuery->orderBy('created_at', 'desc')->get();
 
+        // Todos los usuarios (para modales de asignación, miembros y filtro general)
+        $allUsers = User::orderBy('name', 'asc')->get();
+
         // Usuarios asignados o relacionados con el proyecto activo (miembros del proyecto y usuarios asignados en tareas)
         $projectUsers = collect();
         if ($activeProject) {
@@ -75,17 +78,214 @@ class DashboardController extends Controller
                 ->unique('id')
                 ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
                 ->values();
+        } else {
+            $projectUsers = $visibleProjects->flatMap(fn($p) => $p->members)
+                ->concat($tasks->flatMap(fn ($t) => $t->assignedUsers))
+                ->unique('id')
+                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values();
+        }
+
+        if ($projectUsers->isEmpty()) {
+            $projectUsers = $allUsers;
         }
 
         $selectedUserId = $request->query('user_id');
-        if ($selectedUserId && !$projectUsers->contains('id', (int)$selectedUserId)) {
+        if ($selectedUserId && !$projectUsers->contains('id', (int)$selectedUserId) && !$allUsers->contains('id', (int)$selectedUserId)) {
             $selectedUserId = null;
         }
 
-        $today = Carbon::today();
+        // Tareas Periódicas
+        $recurringTasksQuery = \App\Models\RecurringTask::with(['project', 'module', 'assignedUsers', 'subtasks', 'creator']);
+        if ($activeProject) {
+            $recurringTasksQuery->where('project_id', $activeProject->id);
+        } else {
+            $recurringTasksQuery->whereIn('project_id', $visibleProjects->pluck('id'));
+        }
+        if ($activeModuleId !== 'all' && !empty($activeModuleId)) {
+            $recurringTasksQuery->where('module_id', $activeModuleId);
+        }
+        if ($user->isHelper()) {
+            $recurringTasksQuery->whereHas('assignedUsers', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        } elseif ($selectedUserId) {
+            $recurringTasksQuery->whereHas('assignedUsers', function ($q) use ($selectedUserId) {
+                $q->where('users.id', (int)$selectedUserId);
+            });
+        }
+        $recurringTasks = $recurringTasksQuery->orderBy('created_at', 'desc')->get();
+
+        // Incidencias del proyecto activo o visibles
+        $incidentsQuery = Incident::with(['project', 'reporter']);
+        if ($activeProject) {
+            $incidentsQuery->where('project_id', $activeProject->id);
+        } else {
+            $incidentsQuery->whereIn('project_id', $visibleProjects->pluck('id'));
+        }
+        if ($selectedUserId) {
+            $incidentsQuery->where('user_id', (int)$selectedUserId);
+        }
+        $incidents = $incidentsQuery->orderBy('created_at', 'desc')->get();
+
+        // Si se seleccionó un usuario específico (filtro del admin), filtrar las tareas para sincronizar estadísticas y listas
+        if ($selectedUserId) {
+            $tasks = $tasks->filter(function ($task) use ($selectedUserId) {
+                return $task->assignedUsers->contains('id', (int)$selectedUserId);
+            })->values();
+        }
+
+        $today = Carbon::today('America/La_Paz');
         $thisMonth = Carbon::now()->month;
         $thisYear = Carbon::now()->year;
         $taskFilter = $request->query('task_filter', 'hoy');
+
+        // Tareas periódicas que corresponden a la agenda del día actual según configuración y programación
+        $todayRecurringTasks = collect();
+        $todayDateStr = $today->toDateString();
+
+        foreach ($recurringTasks as $rule) {
+            if (!$rule->is_active || !$rule->start_date) {
+                continue;
+            }
+            $ruleStartDate = Carbon::parse($rule->start_date);
+            if ($today->lt($ruleStartDate)) {
+                continue;
+            }
+
+            $isScheduledToday = false;
+            switch ($rule->recurrence) {
+                case 'diaria':
+                    $isScheduledToday = true;
+                    break;
+                case 'semanal':
+                    $isScheduledToday = ($today->dayOfWeek === $ruleStartDate->dayOfWeek);
+                    break;
+                case 'mensual':
+                    $targetDay = min($ruleStartDate->day, $today->daysInMonth);
+                    $isScheduledToday = ($today->day === $targetDay);
+                    break;
+                case 'anual':
+                    $targetDay = min($ruleStartDate->day, $today->daysInMonth);
+                    $isScheduledToday = ($today->month === $ruleStartDate->month && $today->day === $targetDay);
+                    break;
+            }
+
+            if ($isScheduledToday) {
+                $inst = $tasks->first(function ($t) use ($rule, $todayDateStr) {
+                    $sStr = $t->start_date ? substr((string)$t->start_date, 0, 10) : null;
+                    return $t->recurring_task_id == $rule->id && $sStr === $todayDateStr;
+                });
+
+                if (!$inst) {
+                    $inst = \App\Services\RecurringTaskService::ensureInstanceExists($rule, $today);
+                    $inst->load(['project', 'module', 'assignedUsers', 'subtasks', 'creator', 'recurringTask']);
+                }
+
+                if ($inst) {
+                    $todayRecurringTasks->push($inst);
+                }
+            }
+        }
+
+        // Periodo seleccionado para tareas periódicas (hoy, mes, anio)
+        $periodicPeriod = $request->query('periodic_period', 'hoy');
+        if (!in_array($periodicPeriod, ['hoy', 'mes', 'anio'])) {
+            $periodicPeriod = 'hoy';
+        }
+
+        // Tareas periódicas para el Mes actual (según programación y configuración)
+        $monthInstances = $tasks->filter(function ($t) use ($thisMonth, $thisYear) {
+            if (is_null($t->recurring_task_id) || !$t->start_date) {
+                return false;
+            }
+            $c = Carbon::parse($t->start_date);
+            return $c->year === $thisYear && $c->month === $thisMonth;
+        });
+
+        $seenMonth = [];
+        foreach ($monthInstances as $inst) {
+            $dStr = substr((string)$inst->start_date, 0, 10);
+            $key = $inst->recurring_task_id . '_' . $dStr;
+            if (!isset($seenMonth[$key])) {
+                $seenMonth[$key] = $inst;
+            } else {
+                if ($seenMonth[$key]->status !== 'finalizado' && $inst->status === 'finalizado') {
+                    $seenMonth[$key] = $inst;
+                }
+            }
+        }
+
+        // Tareas periódicas para el Año actual
+        $yearInstances = $tasks->filter(function ($t) use ($thisYear) {
+            if (is_null($t->recurring_task_id) || !$t->start_date) {
+                return false;
+            }
+            return Carbon::parse($t->start_date)->year === $thisYear;
+        });
+
+        $seenYear = [];
+        foreach ($yearInstances as $inst) {
+            $dStr = substr((string)$inst->start_date, 0, 10);
+            $key = $inst->recurring_task_id . '_' . $dStr;
+            if (!isset($seenYear[$key])) {
+                $seenYear[$key] = $inst;
+            } else {
+                if ($seenYear[$key]->status !== 'finalizado' && $inst->status === 'finalizado') {
+                    $seenYear[$key] = $inst;
+                }
+            }
+        }
+
+        // Asegurar que las reglas anuales activas tengan su ocurrencia contemplada
+        foreach ($recurringTasks as $rule) {
+            if (!$rule->is_active || !$rule->start_date || $rule->recurrence !== 'anual') {
+                continue;
+            }
+            $ruleStartDate = Carbon::parse($rule->start_date);
+            $targetDaysInMonth = Carbon::create($thisYear, $ruleStartDate->month, 1)->daysInMonth;
+            $targetDay = min($ruleStartDate->day, $targetDaysInMonth);
+            $annualDate = Carbon::create($thisYear, $ruleStartDate->month, $targetDay);
+            $annualDateStr = $annualDate->toDateString();
+            $key = $rule->id . '_' . $annualDateStr;
+
+            if ($ruleStartDate->month === $thisMonth && !isset($seenMonth[$key])) {
+                $inst = \App\Services\RecurringTaskService::ensureInstanceExists($rule, $annualDate);
+                $inst->load(['project', 'module', 'assignedUsers', 'subtasks', 'creator', 'recurringTask']);
+                $seenMonth[$key] = $inst;
+            }
+
+            if (!isset($seenYear[$key])) {
+                $inst = \App\Services\RecurringTaskService::ensureInstanceExists($rule, $annualDate);
+                $inst->load(['project', 'module', 'assignedUsers', 'subtasks', 'creator', 'recurringTask']);
+                $seenYear[$key] = $inst;
+            }
+        }
+
+        $monthRecurringTasks = collect(array_values($seenMonth))->sortBy(function ($t) {
+            return substr((string)$t->start_date, 0, 10) . ' ' . ($t->start_time ?: '00:00');
+        })->values();
+
+        $yearRecurringTasks = collect(array_values($seenYear))->sortBy(function ($t) {
+            return substr((string)$t->start_date, 0, 10) . ' ' . ($t->start_time ?: '00:00');
+        })->values();
+
+        // Tareas generales: excluye ocurrencias de tareas periódicas para «Todas las tareas»
+        $generalTasks = $tasks->filter(fn ($t) => is_null($t->recurring_task_id))->values();
+
+        // Filtro unificado de tareas (estado, prioridad o vencimiento) y buscador por nombre
+        $taskFilterOption = (string)$request->query('task_filter_option', '');
+        if (!$taskFilterOption) {
+            if ($request->filled('task_status')) {
+                $taskFilterOption = 'status:' . $request->query('task_status');
+            } elseif ($request->filled('task_priority')) {
+                $taskFilterOption = 'priority:' . $request->query('task_priority');
+            } elseif ($request->filled('task_due')) {
+                $taskFilterOption = 'due:' . $request->query('task_due');
+            }
+        }
+        $taskSearch = trim((string)$request->query('task_search', ''));
+        $resumenStatus = (string)$request->query('task_status', 'all');
 
         // Tareas de hoy: programadas para hoy, completadas hoy, o pendientes vencidas
         $todayTasks = $tasks->filter(function ($task) use ($today) {
@@ -143,35 +343,6 @@ class DashboardController extends Controller
         $modules = $activeProject
             ? $activeProject->modules
             : Module::whereIn('project_id', $visibleProjects->pluck('id'))->get();
-
-        // Incidencias del proyecto activo o visibles
-        $incidentsQuery = Incident::with(['project', 'reporter']);
-        if ($activeProject) {
-            $incidentsQuery->where('project_id', $activeProject->id);
-        } else {
-            $incidentsQuery->whereIn('project_id', $visibleProjects->pluck('id'));
-        }
-        $incidents = $incidentsQuery->orderBy('created_at', 'desc')->get();
-
-        // Todos los usuarios (para modales de asignación y miembros)
-        $allUsers = User::all();
-
-        // Tareas Periódicas
-        $recurringTasksQuery = \App\Models\RecurringTask::with(['project', 'module', 'assignedUsers', 'subtasks', 'creator']);
-        if ($activeProject) {
-            $recurringTasksQuery->where('project_id', $activeProject->id);
-        } else {
-            $recurringTasksQuery->whereIn('project_id', $visibleProjects->pluck('id'));
-        }
-        if ($activeModuleId !== 'all' && !empty($activeModuleId)) {
-            $recurringTasksQuery->where('module_id', $activeModuleId);
-        }
-        if ($user->isHelper()) {
-            $recurringTasksQuery->whereHas('assignedUsers', function ($q) use ($user) {
-                $q->where('users.id', $user->id);
-            });
-        }
-        $recurringTasks = $recurringTasksQuery->orderBy('created_at', 'desc')->get();
 
         // -------------------------------------------------------------
         // Papelera de tareas eliminadas (Retención de 30 días)
@@ -308,6 +479,7 @@ class DashboardController extends Controller
             'monthTasks',
             'overdueTasks',
             'overdueCount',
+            'todayRecurringTasks',
             'taskFilter',
             'modules',
             'incidents',
@@ -328,8 +500,15 @@ class DashboardController extends Controller
             'periodicidadNombres',
             'projectUsers',
             'selectedUserId',
+            'taskFilterOption',
+            'taskSearch',
             'matrixMonth',
-            'matrixData'
+            'matrixData',
+            'resumenStatus',
+            'generalTasks',
+            'periodicPeriod',
+            'monthRecurringTasks',
+            'yearRecurringTasks'
         ));
 
     }
@@ -353,18 +532,22 @@ class DashboardController extends Controller
             7 => 'dom',
         ];
 
+        $todayBolivia = Carbon::today('America/La_Paz')->toDateString();
+
         $days = [];
         for ($d = 1; $d <= $daysInMonth; $d++) {
             $cDate = $matrixCarbon->copy()->day($d);
             $dayOfWeek = $cDate->dayOfWeekIso; // 1 = Monday ... 7 = Sunday
             $weekIndex = (int) ceil($d / 7);
+            $dateStr = $cDate->format('Y-m-d');
 
             $days[$d] = [
                 'day' => $d,
-                'date' => $cDate->format('Y-m-d'),
+                'date' => $dateStr,
                 'carbon' => $cDate,
                 'dayName' => $spanishDaysShort[$dayOfWeek] ?? 'lun',
-                'isToday' => $cDate->isToday(),
+                'isToday' => ($dateStr === $todayBolivia),
+                'isFuture' => ($dateStr > $todayBolivia),
                 'isWeekend' => in_array($dayOfWeek, [6, 7]),
                 'weekIndex' => $weekIndex,
             ];
@@ -380,6 +563,11 @@ class DashboardController extends Controller
                 'border' => 'border-rose-400 dark:border-rose-500',
                 'checkBg' => 'bg-[#f43f5e] text-white border-[#f43f5e] shadow-xs hover:bg-[#e11d48]',
                 'checkPending' => 'border-rose-300 dark:border-rose-800 bg-white dark:bg-slate-800/80 hover:border-rose-400',
+                'todayHeaderBg' => 'bg-rose-100/90 dark:bg-rose-950/60',
+                'todayCellBg' => 'bg-rose-50/75 dark:bg-rose-950/35',
+                'todayBadge' => 'bg-[#f43f5e] text-white ring-2 ring-rose-300/80 dark:ring-rose-800/80',
+                'todayText' => 'text-[#f43f5e] dark:text-[#fb7185] font-black',
+                'todayBorder' => 'border-rose-200 dark:border-rose-900/60',
             ],
             2 => [
                 'name' => 'SEMANA 2',
@@ -389,6 +577,11 @@ class DashboardController extends Controller
                 'border' => 'border-purple-400 dark:border-purple-500',
                 'checkBg' => 'bg-[#8b5cf6] text-white border-[#8b5cf6] shadow-xs hover:bg-[#7c3aed]',
                 'checkPending' => 'border-purple-300 dark:border-purple-800 bg-white dark:bg-slate-800/80 hover:border-purple-400',
+                'todayHeaderBg' => 'bg-purple-100/90 dark:bg-purple-950/60',
+                'todayCellBg' => 'bg-purple-50/75 dark:bg-purple-950/35',
+                'todayBadge' => 'bg-[#8b5cf6] text-white ring-2 ring-purple-300/80 dark:ring-purple-800/80',
+                'todayText' => 'text-[#8b5cf6] dark:text-[#a78bfa] font-black',
+                'todayBorder' => 'border-purple-200 dark:border-purple-900/60',
             ],
             3 => [
                 'name' => 'SEMANA 3',
@@ -398,6 +591,11 @@ class DashboardController extends Controller
                 'border' => 'border-blue-400 dark:border-blue-500',
                 'checkBg' => 'bg-[#3b82f6] text-white border-[#3b82f6] shadow-xs hover:bg-[#2563eb]',
                 'checkPending' => 'border-blue-300 dark:border-blue-800 bg-white dark:bg-slate-800/80 hover:border-blue-400',
+                'todayHeaderBg' => 'bg-blue-100/90 dark:bg-blue-950/60',
+                'todayCellBg' => 'bg-blue-50/75 dark:bg-blue-950/35',
+                'todayBadge' => 'bg-[#3b82f6] text-white ring-2 ring-blue-300/80 dark:ring-blue-800/80',
+                'todayText' => 'text-[#3b82f6] dark:text-[#60a5fa] font-black',
+                'todayBorder' => 'border-blue-200 dark:border-blue-900/60',
             ],
             4 => [
                 'name' => 'SEMANA 4',
@@ -407,6 +605,11 @@ class DashboardController extends Controller
                 'border' => 'border-amber-400 dark:border-amber-500',
                 'checkBg' => 'bg-[#f59e0b] text-white border-[#f59e0b] shadow-xs hover:bg-[#d97706]',
                 'checkPending' => 'border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-800/80 hover:border-amber-400',
+                'todayHeaderBg' => 'bg-amber-100/90 dark:bg-amber-950/60',
+                'todayCellBg' => 'bg-amber-50/75 dark:bg-amber-950/35',
+                'todayBadge' => 'bg-[#f59e0b] text-white ring-2 ring-amber-300/80 dark:ring-amber-800/80',
+                'todayText' => 'text-[#f59e0b] dark:text-[#fbbf24] font-black',
+                'todayBorder' => 'border-amber-200 dark:border-amber-900/60',
             ],
             5 => [
                 'name' => 'SEMANA 5',
@@ -416,6 +619,11 @@ class DashboardController extends Controller
                 'border' => 'border-emerald-400 dark:border-emerald-500',
                 'checkBg' => 'bg-[#10b981] text-white border-[#10b981] shadow-xs hover:bg-[#059669]',
                 'checkPending' => 'border-emerald-300 dark:border-emerald-800 bg-white dark:bg-slate-800/80 hover:border-emerald-400',
+                'todayHeaderBg' => 'bg-emerald-100/90 dark:bg-emerald-950/60',
+                'todayCellBg' => 'bg-emerald-50/75 dark:bg-emerald-950/35',
+                'todayBadge' => 'bg-[#10b981] text-white ring-2 ring-emerald-300/80 dark:ring-emerald-800/80',
+                'todayText' => 'text-[#10b981] dark:text-[#34d399] font-black',
+                'todayBorder' => 'border-emerald-200 dark:border-emerald-900/60',
             ],
         ];
 
@@ -434,6 +642,11 @@ class DashboardController extends Controller
                     'border' => $theme['border'],
                     'checkBg' => $theme['checkBg'],
                     'checkPending' => $theme['checkPending'],
+                    'todayHeaderBg' => $theme['todayHeaderBg'],
+                    'todayCellBg' => $theme['todayCellBg'],
+                    'todayBadge' => $theme['todayBadge'],
+                    'todayText' => $theme['todayText'],
+                    'todayBorder' => $theme['todayBorder'],
                 ];
             }
             $weeks[$wIdx]['daysCount']++;

@@ -66,6 +66,25 @@
         'media' => 'Media',
         'alta'  => 'Alta',
     ];
+
+    if (isset($prioridadesConfig) && $prioridadesConfig->count() > 0) {
+        $prioridadesList = $prioridadesConfig->map(function($item) {
+            $key = $item->clave ?: \Illuminate\Support\Str::slug($item->nombre, '_');
+            return [
+                'id' => $key,
+                'title' => $item->nombre,
+                'color' => $item->color,
+            ];
+        })->toArray();
+    } else {
+        $prioridadesList = [
+            ['id' => 'baja',  'title' => $prioridadNombres['baja'] ?? 'Baja',  'color' => $prioridadColores['baja'] ?? '#64748b'],
+            ['id' => 'media', 'title' => $prioridadNombres['media'] ?? 'Media', 'color' => $prioridadColores['media'] ?? '#f59e0b'],
+            ['id' => 'alta',  'title' => $prioridadNombres['alta'] ?? 'Alta',  'color' => $prioridadColores['alta'] ?? '#ef4444'],
+        ];
+    }
+    $taskFilterOption = $taskFilterOption ?? '';
+    $taskSearch = $taskSearch ?? '';
     $periodicidadColores = $periodicidadColores ?? [
         'diaria'  => '#06b6d4',
         'semanal' => '#3b82f6',
@@ -138,22 +157,6 @@
         </button>
     </div>
     @endif
-
-    <!-- Current User Info Card -->
-    <div class="px-3 sm:px-4 py-2">
-        <div class="flex items-center justify-between bg-slate-800/70 border border-slate-700/60 rounded-xl px-3 py-2.5">
-            <div class="flex items-center gap-2.5 min-w-0">
-                <div class="w-8 h-8 rounded-lg bg-blue-950/60 border border-blue-800/60 text-blue-300 font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-                    {{ $user->initials }}
-                </div>
-                <div class="min-w-0">
-                    <p class="text-xs font-semibold text-slate-200 truncate leading-tight">{{ $user->name }}</p>
-                    <span class="text-[10px] font-medium text-slate-400 block truncate">{{ $user->role }}</span>
-                </div>
-            </div>
-            <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-xs" title="En línea"></span>
-        </div>
-    </div>
 
     <!-- Section Buttons: Proyectos / Todo (Global) -->
     <div class="px-3 sm:px-4 py-2 grid grid-cols-2 gap-2">
@@ -273,233 +276,267 @@
 <!-- Main Content Workspace -->
 <main class="flex-1 flex flex-col h-full overflow-hidden bg-[#B3B3B3] dark:bg-[#0b0f19] transition-colors duration-200">
 
-    <!-- Top Workspace Navbar -->
-    <header class="bg-[#0f172a] lg:bg-[#B3B3B3] lg:dark:bg-[#0b0f19] border-b border-slate-700/60 lg:border-black/15 lg:dark:border-slate-800/80 px-3 sm:px-6 flex flex-col lg:flex-row lg:items-stretch shadow-md lg:shadow-none shrink-0 z-20 lg:min-h-[72px]">
+    <!-- Top Workspace Navbar (2 Rows as in modoclaro.png & modooscuro.jpeg) -->
+    <header class="bg-[#0f172a] lg:bg-[#B3B3B3] lg:dark:bg-[#0b0f19] px-3 sm:px-6 flex flex-col shadow-md lg:shadow-none shrink-0 z-20 transition-colors duration-200">
 
-        <!-- Top row on mobile / Left column on desktop -->
-        <div class="flex items-center justify-between lg:justify-start lg:flex-none py-3.5 sm:py-4 lg:py-0 min-h-[58px] lg:min-h-[72px] gap-2 min-w-0">
-            <!-- Mobile hamburger + Project title -->
-            <div class="flex items-center space-x-2.5 sm:space-x-4 min-w-0">
+        <!-- FILA 1: Proyecto + Acciones + Información del Usuario + Cerrar Sesión -->
+        <div class="flex items-center justify-between py-3 lg:py-3.5 gap-2 sm:gap-4 min-w-0">
+            <!-- Left: Toggle Sidebar + Nombre del proyecto y subtítulo resumen -->
+            <div class="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0">
                 <button id="sidebar-toggle-btn" onclick="toggleSidebar()" class="text-white hover:text-slate-200 lg:text-black lg:dark:text-slate-300 lg:hover:text-black lg:dark:hover:text-white p-1.5 -ml-1 rounded-xl hover:bg-white/10 lg:hover:bg-black/10 lg:dark:hover:bg-slate-800 focus:outline-none transition shrink-0" aria-label="Alternar menú lateral" title="Alternar menú lateral">
                     <i data-lucide="menu" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                 </button>
-                <div class="min-w-0">
+                <div class="min-w-0 flex flex-col justify-center">
                     <div class="flex items-center space-x-2 flex-wrap sm:flex-nowrap gap-y-1">
-                        <h2 class="text-sm font-bold text-white truncate max-w-[200px] tracking-tight lg:hidden">
-                            {{ $activeProject ? $activeProject->name : 'Selecciona un Proyecto' }}
-                        </h2>
-                        <h2 class="hidden lg:block text-sm sm:text-lg font-bold text-black dark:text-white truncate max-w-[200px] sm:max-w-xs md:max-w-md tracking-tight">
+                        <h2 class="text-base sm:text-xl font-extrabold text-white lg:text-black lg:dark:text-white truncate max-w-[170px] sm:max-w-xs md:max-w-md lg:max-w-lg tracking-tight">
                             {{ $activeProject ? $activeProject->name : 'Selecciona un Proyecto' }}
                         </h2>
                         @if($activeProject && $activeModuleId && $activeModuleId !== 'all')
                             @php $activeMod = $activeProject->modules->firstWhere('id', $activeModuleId); @endphp
                             @if($activeMod)
-                                <span class="hidden lg:flex text-[11px] bg-white/70 dark:bg-slate-800 text-black dark:text-slate-200 border border-black/15 dark:border-slate-700 font-semibold px-2.5 py-0.5 rounded-full items-center space-x-1 shrink-0">
+                                <span class="hidden sm:inline-flex text-[11px] bg-white/70 dark:bg-slate-800 text-black dark:text-slate-200 border border-black/15 dark:border-slate-700 font-semibold px-2.5 py-0.5 rounded-full items-center space-x-1 shrink-0">
                                     <i data-lucide="box" class="w-3 h-3 text-indigo-700 dark:text-blue-400"></i>
                                     <span class="truncate max-w-[120px]">{{ $activeMod->name }}</span>
                                 </span>
                             @endif
                         @endif
                     </div>
+                    {{-- Resumen de tareas (oculto temporalmente a petición del usuario)
+                    @if($activeProject)
+                        <p class="hidden sm:block text-[11px] text-slate-300 lg:text-slate-600 lg:dark:text-slate-400 font-medium truncate mt-0.5">
+                            {{ $tasks->count() }} tareas · {{ $todayTasks->where('status', '!=', 'finalizado')->count() }} pendientes hoy · {{ $recurringTasks->count() }} periódicas
+                        </p>
+                    @endif
+                    --}}
                 </div>
             </div>
 
-            <!-- Right actions on mobile/tablet (< lg) -->
-            <div class="flex items-center space-x-1.5 sm:space-x-2 lg:hidden shrink-0">
-                <!-- Theme toggle button on mobile -->
-                <button type="button" onclick="toggleTheme()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition" title="Cambiar modo claro / oscuro">
-                    <span class="theme-icon-moon"><i data-lucide="moon" class="w-4 h-4"></i></span>
-                    <span class="theme-icon-sun hidden"><i data-lucide="sun" class="w-4 h-4 text-amber-400"></i></span>
-                </button>
-
-                <!-- Botón móvil Papelera (icono cuadrado con fondo rojo) -->
-                <a href="{{ route('dashboard', ['project_id' => $activeProject ? $activeProject->id : '', 'module_id' => $activeModuleId, 'view' => 'papelera']) }}"
-                    class="p-2 rounded-xl bg-red-600 hover:bg-red-700 text-white transition flex items-center justify-center shadow-xs active:scale-95"
-                    title="Papelera">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </a>
-
+            <!-- Right: Botones de Acción + Selector de Tema + Info Usuario + Cerrar Sesión -->
+            <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
+                <!-- Botón de acción contextual según la vista activa -->
                 @if($activeProject)
                     @if($activeView === 'resumen' || $activeView === 'kanban' || $activeView === 'calendario')
                         @if(!$user->isHelper())
                             <button onclick="openTaskModal()"
-                                class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80" title="Agregar Tarea">
+                                class="py-1.5 px-2.5 sm:py-2 sm:px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80 shrink-0" title="Agregar Tarea">
                                 <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                                <span class="hidden sm:inline">Tarea</span>
+                                <span class="hidden md:inline">Agregar Tarea</span>
+                                <span class="hidden sm:inline md:hidden">Tarea</span>
                             </button>
                         @endif
                     @elseif($activeView === 'incidencias')
                         <button onclick="openIncidentModal()"
-                            class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80" title="Reportar Incidencia">
+                            class="py-1.5 px-2.5 sm:py-2 sm:px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80 shrink-0" title="Reportar Incidencia">
                             <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                            <span class="hidden sm:inline">Reportar</span>
+                            <span class="hidden md:inline">Reportar Incidencia</span>
+                            <span class="hidden sm:inline md:hidden">Reportar</span>
                         </button>
                     @elseif($activeView === 'periodicas')
                         @if(!$user->isHelper())
                             <button onclick="openRecurringTaskModal()"
-                                class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80" title="Nueva Tarea Periódica">
+                                class="py-1.5 px-2.5 sm:py-2 sm:px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80 shrink-0" title="Nueva Tarea Periódica">
                                 <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                                <span class="hidden sm:inline">Nueva</span>
+                                <span class="hidden md:inline">Nueva Tarea Periódica</span>
+                                <span class="hidden sm:inline md:hidden">Nueva</span>
                             </button>
                         @endif
                     @elseif($activeView === 'enlaces' && !$user->isHelper())
                         <button onclick='openProjectModal(@json($activeProject->load("links.assignedUsers")))'
-                            class="py-1.5 px-2.5 sm:py-2 sm:px-3 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80" title="Gestionar Enlaces">
+                            class="py-1.5 px-2.5 sm:py-2 sm:px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-1.5 transition shadow-xs active:scale-95 border border-slate-700/80 dark:border-slate-600/80 shrink-0" title="Gestionar Enlaces">
                             <i data-lucide="link" class="w-4 h-4"></i>
-                            <span class="hidden sm:inline">Enlaces</span>
+                            <span class="hidden md:inline">Gestionar Enlaces</span>
+                            <span class="hidden sm:inline md:hidden">Enlaces</span>
                         </button>
                     @endif
                 @endif
 
-                <form method="POST" action="{{ route('logout') }}">
+                <!-- Selector de Tema (Claro / Oscuro) -->
+                <button type="button" onclick="toggleTheme()" class="p-2 rounded-xl bg-white/10 lg:bg-white/70 hover:bg-white/20 lg:hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-700 text-white lg:text-black dark:text-amber-300 border border-white/10 lg:border-black/15 dark:border-slate-700/70 transition shrink-0" title="Cambiar modo claro / oscuro">
+                    <span class="theme-icon-moon"><i data-lucide="moon" class="w-4 h-4"></i></span>
+                    <span class="theme-icon-sun hidden"><i data-lucide="sun" class="w-4 h-4 text-amber-400"></i></span>
+                </button>
+
+                <!-- 1. Botón de Cerrar Sesión (A la izquierda del usuario) -->
+                <form method="POST" action="{{ route('logout') }}" class="inline m-0 shrink-0">
                     @csrf
-                    <button type="submit" title="Cerrar Sesión" class="flex items-center space-x-1 p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 text-xs transition border border-white/10">
-                        <i data-lucide="log-out" class="w-4 h-4"></i> 
+                    <button type="submit" title="Cerrar Sesión" class="flex items-center gap-1.5 p-2 sm:py-2 sm:px-2.5 rounded-xl bg-white/10 lg:bg-white/70 hover:bg-red-500/20 lg:hover:bg-red-50 dark:bg-slate-800/80 dark:hover:bg-red-950/60 text-red-300 lg:text-slate-800 lg:hover:text-red-600 dark:text-slate-300 dark:hover:text-red-300 text-xs font-bold transition border border-white/10 lg:border-black/15 dark:border-slate-700/70 hover:border-red-200 dark:hover:border-red-900/60 shrink-0">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                        <span class="hidden md:inline">Salir</span>
                     </button>
                 </form>
+
+                <!-- 2. Información del Usuario (Inmediatamente a la derecha del icono de salir) -->
+                <div class="flex items-center gap-2 sm:gap-2.5 shrink-0 pl-1 sm:pl-2.5 sm:border-l sm:border-slate-700/60 lg:sm:border-black/15 lg:dark:sm:border-slate-800/80">
+                    <div class="relative shrink-0">
+                        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#6366f1] text-white font-bold text-xs sm:text-sm flex items-center justify-center shadow-xs ring-2 ring-indigo-400/30">
+                            @if(!empty($user->avatar))
+                                <img src="{{ asset($user->avatar) }}" alt="{{ $user->name }}" class="w-full h-full rounded-full object-cover">
+                            @elseif(!empty($user->profile_photo_url))
+                                <img src="{{ $user->profile_photo_url }}" alt="{{ $user->name }}" class="w-full h-full rounded-full object-cover">
+                            @else
+                                {{ $user->initials }}
+                            @endif
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-[#0f172a] lg:ring-[#B3B3B3] lg:dark:ring-[#0b0f19]" title="En línea"></span>
+                    </div>
+                    <div class="min-w-0 hidden sm:block text-left">
+                        <p class="text-xs sm:text-sm font-bold text-white lg:text-slate-900 lg:dark:text-white truncate leading-tight">{{ $user->name }}</p>
+                        <span class="text-[10px] sm:text-[11px] font-medium text-slate-300 lg:text-slate-600 lg:dark:text-slate-400 block truncate capitalize">{{ $user->role }}</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Desktop Center: Tab Navigation (lg+) -->
+        <!-- FILA 2: Navegación de Vistas Disponibles (Debajo del Título del Proyecto) -->
         @if($activeProject)
-        <nav class="hidden lg:flex items-stretch overflow-x-auto lg:overflow-visible no-scrollbar lg:border-t-0 lg:mx-0 lg:px-0 flex-nowrap shrink-0 gap-1 sm:gap-2 lg:ml-4 lg:min-h-[72px]">
-            <!-- 1. Tab Resumen / Dashboard -->
-            <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'resumen']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'resumen' ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
-                <span>Resumen</span>
-            </a>
+        <div class="flex items-center justify-between -mx-3 sm:-mx-6 px-3 sm:px-6 overflow-hidden">
+            <nav class="flex items-stretch overflow-x-auto no-scrollbar py-0 min-h-[46px] lg:min-h-[48px] gap-1 sm:gap-2 flex-nowrap scroll-smooth">
+                <!-- 1. Tab Resumen -->
+                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'resumen']) }}"
+                    class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-2 text-xs sm:text-sm lg:text-[14px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $activeView === 'resumen' 
+                        ? 'border-indigo-500 text-indigo-400 lg:border-indigo-600 lg:text-indigo-900 dark:border-indigo-400 dark:text-white' 
+                        : 'border-transparent text-slate-300 hover:text-white lg:text-black lg:hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
+                    <span>Resumen</span>
+                </a>
 
-            <!-- 2. Tab Calendario -->
-            <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'calendario']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'calendario' ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
-                <span>Calendario</span>
-            </a>
+                <!-- 2. Tab Calendario -->
+                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'calendario']) }}"
+                    class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-2 text-xs sm:text-sm lg:text-[14px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $activeView === 'calendario' 
+                        ? 'border-indigo-500 text-indigo-400 lg:border-indigo-600 lg:text-indigo-900 dark:border-indigo-400 dark:text-white' 
+                        : 'border-transparent text-slate-300 hover:text-white lg:text-black lg:hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
+                    <span>Calendario</span>
+                </a>
 
-            <!-- 3. Tab Tablero Kanban -->
-            <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'kanban']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'kanban' ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
-                <span>Tablero Kanban</span>
-            </a>
+                <!-- 3. Tab Tablero Kanban -->
+                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'kanban']) }}"
+                    class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-2 text-xs sm:text-sm lg:text-[14px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $activeView === 'kanban' 
+                        ? 'border-indigo-500 text-indigo-400 lg:border-indigo-600 lg:text-indigo-900 dark:border-indigo-400 dark:text-white' 
+                        : 'border-transparent text-slate-300 hover:text-white lg:text-black lg:hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
+                    <span>Tablero Kanban</span>
+                </a>
 
-            <!-- 4. Tab Enlaces -->
-            <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'enlaces']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'enlaces' ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
-                <span>Enlaces</span>
-                @php
-                    $userLinkCount = $user->isHelper()
-                        ? $activeProject->links->filter(fn($l) => $l->assignedUsers->contains('id', $user->id))->count()
-                        : $activeProject->links->count();
-                @endphp
-                @if($userLinkCount > 0)
-                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
-                        {{ $userLinkCount }}
-                    </span>
+                <!-- 4. Tab Enlaces -->
+                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'enlaces']) }}"
+                    class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-2 text-xs sm:text-sm lg:text-[14px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $activeView === 'enlaces' 
+                        ? 'border-indigo-500 text-indigo-400 lg:border-indigo-600 lg:text-indigo-900 dark:border-indigo-400 dark:text-white' 
+                        : 'border-transparent text-slate-300 hover:text-white lg:text-black lg:hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
+                    <span>Enlaces</span>
+                    @php
+                        $userLinkCount = $user->isHelper()
+                            ? $activeProject->links->filter(fn($l) => $l->assignedUsers->contains('id', $user->id))->count()
+                            : $activeProject->links->count();
+                    @endphp
+                    @if($userLinkCount > 0)
+                        <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
+                            {{ $userLinkCount }}
+                        </span>
+                    @endif
+                </a>
+
+                <!-- 5. Tab Incidencias -->
+                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'incidencias']) }}"
+                    class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-2 text-xs sm:text-sm lg:text-[14px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $activeView === 'incidencias' 
+                        ? 'border-red-500 text-red-400 lg:border-red-600 lg:text-red-700 dark:border-red-400 dark:text-red-300' 
+                        : 'border-transparent text-slate-300 hover:text-red-400 lg:text-black lg:hover:text-red-700 dark:text-slate-400 dark:hover:text-white' }}">
+                    <span>Incidencias</span>
+                    @if($incidents->count() > 0)
+                        <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
+                            {{ $incidents->count() }}
+                        </span>
+                    @endif
+                </a>
+
+                <!-- 6. Tab Tareas Periódicas (Admin/Dev) -->
+                @if($user->isAdmin())
+                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'periodicas']) }}"
+                    class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-2 text-xs sm:text-sm lg:text-[14px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $activeView === 'periodicas' 
+                        ? 'border-indigo-500 text-indigo-400 lg:border-indigo-600 lg:text-indigo-900 dark:border-indigo-400 dark:text-white' 
+                        : 'border-transparent text-slate-300 hover:text-white lg:text-black lg:hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
+                    <span>Periódicas</span>
+                    @if($recurringTasks->count() > 0)
+                        <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
+                            {{ $recurringTasks->count() }}
+                        </span>
+                    @endif
+                </a>
                 @endif
-            </a>
 
-            <!-- 5. Tab Incidencias -->
-            <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'incidencias']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'incidencias' ? 'border-red-600 text-red-700 dark:border-red-400 dark:text-red-300' : 'border-transparent text-black hover:text-red-700 dark:text-slate-400 dark:hover:text-white' }}">
-                <span>Incidencias</span>
-                @if($incidents->count() > 0)
-                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
-                        {{ $incidents->count() }}
-                    </span>
-                @endif
-            </a>
+                <!-- 7. Tab Checklist (Directo, sin selector «Más») -->
+                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'checklist']) }}"
+                    class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-2 text-xs sm:text-sm lg:text-[14px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ in_array($activeView, ['checklist', 'lista_tareas']) 
+                        ? 'border-indigo-500 text-indigo-400 lg:border-indigo-600 lg:text-indigo-900 dark:border-indigo-400 dark:text-white' 
+                        : 'border-transparent text-slate-300 hover:text-white lg:text-black lg:hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
+                    <span>Checklist</span>
+                </a>
 
-            <!-- 6. Tab Tareas Periódicas (Admin/Dev) -->
-            @if($user->isAdmin())
-            <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'periodicas']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'periodicas' ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}">
-                <span>Periódicas</span>
-                @if($recurringTasks->count() > 0)
-                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
-                        {{ $recurringTasks->count() }}
-                    </span>
-                @endif
-            </a>
-            @endif
+                <!-- 8. Tab Papelera -->
+                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'papelera']) }}"
+                    class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-2 text-xs sm:text-sm lg:text-[14px] font-bold border-b-2 whitespace-nowrap transition shrink-0
+                    {{ $activeView === 'papelera' 
+                        ? 'border-red-500 text-red-400 lg:border-red-600 lg:text-red-700 dark:border-red-400 dark:text-red-300' 
+                        : 'border-transparent text-slate-300 hover:text-red-400 lg:text-black lg:hover:text-red-700 dark:text-slate-400 dark:hover:text-white' }}">
+                    <span>Papelera</span>
+                    @if($trashedTasksCount > 0)
+                        <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
+                            {{ $trashedTasksCount }}
+                        </span>
+                    @endif
+                </a>
+            </nav>
 
-            <!-- 7. Tab Papelera -->
-            <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'papelera']) }}"
-                class="flex items-center space-x-1.5 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
-                {{ $activeView === 'papelera' ? 'border-red-600 text-red-700 dark:border-red-400 dark:text-red-300' : 'border-transparent text-black hover:text-red-700 dark:text-slate-400 dark:hover:text-white' }}">
-                <span>Papelera</span>
-                @if($trashedTasksCount > 0)
-                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
-                        {{ $trashedTasksCount }}
-                    </span>
-                @endif
-            </a>
-
-            <!-- 8. Menú Desplegable «Más» -->
-            @php
-                $isMoreActive = in_array($activeView, ['checklist', 'lista_tareas']);
-            @endphp
-            <div class="relative flex items-stretch shrink-0" id="desktop-more-menu-container">
-                <button type="button" onclick="toggleDesktopMoreMenu()" id="btn-desktop-more"
-                    class="flex items-center space-x-1 px-3 py-2.5 lg:py-0 text-sm lg:text-[15px] font-bold border-b-2 whitespace-nowrap transition shrink-0
-                    {{ $isMoreActive ? 'border-indigo-600 text-indigo-900 dark:border-indigo-400 dark:text-white' : 'border-transparent text-black hover:text-indigo-900 dark:text-slate-400 dark:hover:text-white' }}"
-                    aria-expanded="false" aria-haspopup="true" title="Más opciones">
-                    <span>Más</span>
-                    <i data-lucide="chevron-down" id="desktop-more-chevron" class="w-3.5 h-3.5 transition-transform duration-200"></i>
-                </button>
-
-                <!-- Menú Vertical Desplegable (Con soporte de desplazamiento vertical para futuras vistas) -->
-                <div id="desktop-more-dropdown"
-                    class="hidden absolute top-full left-0 mt-1 min-w-[210px] max-h-[60vh] overflow-y-auto rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl py-1.5 z-50 transition-all">
-                    
-                    <!-- Opción: CheckList (Matriz mensual con checks) -->
-                    <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'checklist']) }}"
-                        onclick="closeDesktopMoreMenu()"
-                        class="flex items-center px-3.5 py-2.5 text-xs lg:text-sm transition font-bold border-l-2
-                        {{ $isMoreActive ? 'border-indigo-600 dark:border-indigo-400 bg-white hover:bg-white text-black dark:bg-indigo-600 dark:hover:bg-indigo-600 dark:text-white' : 'border-transparent dark:border-transparent bg-white hover:bg-white text-black dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white' }}">
-                        <span>CheckList</span>
-                    </a>
-
-                    <!-- Espacio preparado para incorporar futuras vistas adicionales aquí -->
+            <!-- Indicador de Fecha y Filtro por Usuario en el extremo derecho (modo escritorio como en modoclaro.png & modooscuro.jpeg) -->
+            <div class="hidden lg:flex flex-col items-end shrink-0 pl-4 py-1 select-none">
+                <div class="flex items-center space-x-1.5 text-xs sm:text-sm font-bold text-black dark:text-slate-100">
+                    <i data-lucide="calendar" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+                    <span>Hoy · {{ ucfirst(\Carbon\Carbon::now()->locale('es')->isoFormat('D [de] MMMM [de] YYYY')) }}</span>
                 </div>
+                @if(!$user->isHelper() && $activeView === 'resumen')
+                    <div class="mt-4 relative flex items-center">
+                        <i data-lucide="user" class="w-4 h-4 absolute left-3 text-slate-400 pointer-events-none"></i>
+                        <select id="resumen-user-filter" onchange="onResumenUserFilterChange(this.value)"
+                            class="pl-9 pr-9 py-1.5 rounded-xl bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs sm:text-sm font-semibold appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500/20 transition min-w-[200px] max-w-[250px] truncate shadow-2xs"
+                            title="Filtrar por usuario">
+                            <option value="">Todos los usuarios</option>
+                            @foreach($projectUsers as $pUser)
+                                <option value="{{ $pUser->id }}" {{ (string)$selectedUserId === (string)$pUser->id ? 'selected' : '' }}>
+                                    {{ $pUser->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <i data-lucide="chevron-down" class="w-4 h-4 absolute right-3 text-slate-400 pointer-events-none"></i>
+                    </div>
+                @endif
             </div>
-        </nav>
+        </div>
 
         <!-- Mobile Contextual Sub-navigation (Reemplaza accesos repetidos por subapartados de la sección activa) -->
-        <nav class="lg:hidden flex items-stretch overflow-x-auto no-scrollbar border-t border-slate-800 -mx-3 px-3 sm:-mx-6 sm:px-6 flex-nowrap shrink-0 gap-1 sm:gap-2 py-1 bg-[#0f172a] text-slate-300">
+        <nav class="lg:hidden flex items-stretch overflow-x-auto no-scrollbar -mx-3 px-3 sm:-mx-6 sm:px-6 flex-nowrap shrink-0 gap-1 sm:gap-2 py-1 bg-[#0f172a] text-slate-300">
             @if($activeView === 'resumen')
-                <!-- Subnavegación Contextual: Resumen -->
-                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'resumen', 'task_filter' => 'hoy']) }}"
-                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                    {{ $taskFilter === 'hoy' ? 'border-indigo-400 text-white font-bold' : 'border-transparent text-slate-300 hover:text-white' }}">
-                    <span>Tareas de hoy</span>
-                    <span class="text-[10px] px-1.5 py-0.2 rounded-full font-bold tab-counter-badge">{{ $todayTasks->count() }}</span>
-                </a>
+                <!-- Subnavegación Contextual: Resumen móvil -->
+                <button type="button" onclick="document.getElementById('contenedor-todas-tareas')?.scrollIntoView({behavior: 'smooth'})"
+                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-indigo-400 text-white whitespace-nowrap transition shrink-0">
+                    <span>Todas las tareas</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded-full font-bold tab-counter-badge">{{ ($generalTasks ?? $tasks->filter(fn($t) => is_null($t->recurring_task_id)))->count() }}</span>
+                </button>
 
-                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'resumen', 'task_filter' => 'mes']) }}"
-                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0
-                    {{ $taskFilter === 'mes' ? 'border-indigo-400 text-white font-bold' : 'border-transparent text-slate-300 hover:text-white' }}">
-                    <span>Tareas del mes</span>
-                    <span class="text-[10px] px-1.5 py-0.2 rounded-full font-bold tab-counter-badge">{{ $monthTasks->count() }}</span>
-                </a>
-
-                <button type="button" onclick="document.getElementById('kpi-stats-grid')?.scrollIntoView({behavior: 'smooth'})"
+                <button type="button" onclick="document.getElementById('contenedor-periodicas')?.scrollIntoView({behavior: 'smooth'})"
                     class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-transparent text-slate-300 hover:text-white whitespace-nowrap transition shrink-0">
-                    <span>Estadísticas</span>
+                    <span>Periódicas</span>
+                    <span id="subnav-periodicas-counter" class="text-[10px] px-1.5 py-0.2 rounded-full font-bold tab-counter-badge">{{ ($todayRecurringTasks ?? collect())->count() }}</span>
                 </button>
 
-                @if($overdueCount > 0)
-                <button type="button" onclick="document.getElementById('widget-urgencias')?.scrollIntoView({behavior: 'smooth'})"
-                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-transparent text-red-400 whitespace-nowrap transition shrink-0">
-                    <span>Urgencias</span>
-                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $overdueCount }}</span>
+                <button type="button" onclick="document.getElementById('contenedor-tareas-vencidas')?.scrollIntoView({behavior: 'smooth'})"
+                    class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-transparent text-slate-300 hover:text-white whitespace-nowrap transition shrink-0">
+                    <span>Vencidas</span>
+                    <span class="text-[10px] px-1.5 py-0.2 rounded-full font-bold tab-counter-badge {{ $overdueCount > 0 ? 'bg-red-500/80 text-white' : '' }}">{{ $overdueCount }}</span>
                 </button>
-                @endif
-
             @elseif($activeView === 'calendario')
                 <!-- Subnavegación Contextual: Calendario -->
                 <button type="button" id="subnav-cal-btn-calendar" onclick="selectMobileCalView('calendar')"
@@ -512,14 +549,14 @@
                     <span>Lista de tareas del proyecto</span>
                 </button>
 
-                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'calendario', 'task_filter' => 'hoy', 'cal_subview' => 'list']) }}"
+                <a href="{{ route('dashboard', array_filter(['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'calendario', 'task_filter' => 'hoy', 'cal_subview' => 'list', 'user_id' => $selectedUserId, 'task_filter_option' => $taskFilterOption, 'task_search' => $taskSearch])) }}"
                     id="subnav-cal-btn-hoy"
                     class="cal-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                     <span>Tareas de hoy</span>
                     <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $todayTasks->count() }}</span>
                 </a>
 
-                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'calendario', 'task_filter' => 'mes', 'cal_subview' => 'list']) }}"
+                <a href="{{ route('dashboard', array_filter(['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'calendario', 'task_filter' => 'mes', 'cal_subview' => 'list', 'user_id' => $selectedUserId, 'task_filter_option' => $taskFilterOption, 'task_search' => $taskSearch])) }}"
                     id="subnav-cal-btn-mes"
                     class="cal-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                     <span>Tareas del mes</span>
@@ -635,54 +672,6 @@
         </nav>
         @endif
 
-        <!-- Right (Desktop lg+): Theme toggle, Action Button & Logout -->
-        <div class="hidden lg:flex lg:flex-none items-center lg:justify-start py-3.5 lg:py-0 min-h-[58px] lg:min-h-[72px] space-x-3 lg:ml-auto lg:pl-4 lg:border-l lg:border-black/15 lg:dark:border-slate-800/80">
-            @if($activeProject)
-                @if($activeView === 'resumen' || $activeView === 'kanban' || $activeView === 'calendario')
-                    @if(!$user->isHelper())
-                        <button onclick="openTaskModal()"
-                            class="py-2 px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95 border border-slate-700/80 dark:border-slate-600/80">
-                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                            <span>Agregar Tarea</span>
-                        </button>
-                    @endif
-                @elseif($activeView === 'incidencias')
-                    <button onclick="openIncidentModal()"
-                        class="py-2 px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95 border border-slate-700/80 dark:border-slate-600/80">
-                        <i data-lucide="alert-circle" class="w-4 h-4"></i>
-                        <span>Reportar Incidencia</span>
-                    </button>
-                @elseif($activeView === 'periodicas')
-                    @if(!$user->isHelper())
-                        <button onclick="openRecurringTaskModal()"
-                            class="py-2 px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95 border border-slate-700/80 dark:border-slate-600/80">
-                            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                            <span>Nueva Tarea Periódica</span>
-                        </button>
-                    @endif
-                @elseif($activeView === 'enlaces' && !$user->isHelper())
-                    <button onclick='openProjectModal(@json($activeProject->load("links.assignedUsers")))'
-                        class="py-2 px-3.5 bg-[#5446FB] hover:bg-[#4335e6] text-white font-medium rounded-xl text-xs sm:text-sm flex items-center space-x-2 transition shadow-soft active:scale-95 border border-slate-700/80 dark:border-slate-600/80">
-                        <i data-lucide="link" class="w-4 h-4"></i>
-                        <span>Gestionar Enlaces</span>
-                    </button>
-                @endif
-            @endif
-
-            <!-- Theme toggle button on desktop -->
-            <button type="button" onclick="toggleTheme()" class="p-2 rounded-xl bg-white/70 hover:bg-white dark:bg-slate-800/80 dark:hover:bg-slate-700 text-black dark:text-amber-300 border border-black/15 dark:border-slate-700/70 transition" title="Cambiar modo claro / oscuro">
-                <span class="theme-icon-moon"><i data-lucide="moon" class="w-4 h-4"></i></span>
-                <span class="theme-icon-sun hidden"><i data-lucide="sun" class="w-4 h-4 text-amber-400"></i></span>
-            </button>
-
-            <form method="POST" action="{{ route('logout') }}" class="inline">
-                @csrf
-                <button type="submit" title="Cerrar Sesión" class="flex items-center space-x-1.5 py-2 px-3 rounded-xl bg-white/70 hover:bg-red-50 dark:bg-slate-800/80 dark:hover:bg-red-950/60 text-black hover:text-red-600 dark:text-slate-300 dark:hover:text-red-300 text-xs font-bold transition border border-black/15 dark:border-slate-700/70 hover:border-red-200 dark:hover:border-red-900/60">
-                    <span>Salir</span>
-                    <i data-lucide="log-out" class="w-3.5 h-3.5"></i> 
-                </button>
-            </form>
-        </div>
     </header>
 
     <!-- Workspace Body Area -->
@@ -771,10 +760,34 @@
                         -->
                     <!--</div>-->
 
+                    <!-- Mobile Date & User Filter Bar (Visible only on mobile/tablet) -->
+                    <div class="lg:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 mb-1">
+                        <div class="flex items-center space-x-1.5 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100">
+                            <i data-lucide="calendar" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+                            <span>Hoy · {{ ucfirst(\Carbon\Carbon::now()->locale('es')->isoFormat('D [de] MMMM [de] YYYY')) }}</span>
+                        </div>
+                        @if(!$user->isHelper())
+                            <div class="relative flex items-center w-full sm:w-auto mt-2.5 sm:mt-0">
+                                <i data-lucide="user" class="w-4 h-4 absolute left-3 text-slate-400 pointer-events-none"></i>
+                                <select onchange="onResumenUserFilterChange(this.value)"
+                                    class="w-full sm:w-auto pl-9 pr-9 py-2 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs sm:text-sm font-semibold appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
+                                    title="Filtrar por usuario">
+                                    <option value="">Todos los usuarios</option>
+                                    @foreach($projectUsers as $pUser)
+                                        <option value="{{ $pUser->id }}" {{ (string)$selectedUserId === (string)$pUser->id ? 'selected' : '' }}>
+                                            {{ $pUser->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <i data-lucide="chevron-down" class="w-4 h-4 absolute right-3 text-slate-400 pointer-events-none"></i>
+                            </div>
+                        @endif
+                    </div>
+
                     <!-- 5 Core Metric KPI Cards (Inspired by diseñosreferencia) -->
                     <div id="kpi-stats-grid" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
-                        <!-- KPI 1: Tareas vencidas -->
-                        <div class="p-3.5 sm:p-4 lg:p-5 lg:min-h-[125px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
+                        <!-- KPI 1: Tareas vencidas (Conserva «Ver todas» sin línea divisoria) -->
+                        <div class="p-3.5 sm:p-4 lg:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
                             <div class="flex items-center gap-3.5">
                                 <div class="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
                                     <i data-lucide="alert-triangle" class="w-5 h-5 lg:w-6 lg:h-6"></i>
@@ -784,16 +797,16 @@
                                     <span class="text-xs sm:text-sm font-bold text-black dark:text-slate-300 mt-1.5 block truncate">Tareas vencidas</span>
                                 </div>
                             </div>
-                            <!-- Acceso "Ver todas" para consultar tareas (solo visible en escritorio) -->
-                            <div class="hidden lg:block mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                                <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'kanban']) }}" class="text-[11px] sm:text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline transition inline-flex items-center gap-1">
+                            <div class="mt-2.5">
+                                <a href="{{ route('dashboard', array_filter(['project_id' => $activeProject?->id, 'module_id' => $activeModuleId, 'view' => 'kanban', 'user_id' => $selectedUserId])) }}" class="text-[11px] sm:text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline transition inline-flex items-center gap-1">
                                     <span>Ver todas</span>
+                                    <i data-lucide="chevron-right" class="w-3 h-3"></i>
                                 </a>
                             </div>
                         </div>
 
                         <!-- KPI 2: En proceso -->
-                        <div class="p-3.5 sm:p-4 lg:p-5 lg:min-h-[125px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
+                        <div class="p-3.5 sm:p-4 lg:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
                             <div class="flex items-center gap-3.5">
                                 <div class="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                                     <i data-lucide="clock" class="w-5 h-5 lg:w-6 lg:h-6"></i>
@@ -806,7 +819,7 @@
                         </div>
 
                         <!-- KPI 3: En revisión -->
-                        <div class="p-3.5 sm:p-4 lg:p-5 lg:min-h-[125px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
+                        <div class="p-3.5 sm:p-4 lg:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
                             <div class="flex items-center gap-3.5">
                                 <div class="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
                                     <i data-lucide="search" class="w-5 h-5 lg:w-6 lg:h-6"></i>
@@ -819,7 +832,7 @@
                         </div>
 
                         <!-- KPI 4: Incidencias -->
-                        <div class="p-3.5 sm:p-4 lg:p-5 lg:min-h-[125px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
+                        <div class="p-3.5 sm:p-4 lg:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between">
                             <div class="flex items-center gap-3.5">
                                 <div class="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
                                     <i data-lucide="shield-alert" class="w-5 h-5 lg:w-6 lg:h-6"></i>
@@ -832,7 +845,7 @@
                         </div>
 
                         <!-- KPI 5: Tareas periódicas -->
-                        <div class="p-3.5 sm:p-4 lg:p-5 lg:min-h-[125px] rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between col-span-2 sm:col-span-2 lg:col-span-1 xl:col-span-1">
+                        <div class="p-3.5 sm:p-4 lg:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition relative overflow-hidden flex flex-col justify-between col-span-2 sm:col-span-2 lg:col-span-1 xl:col-span-1">
                             <div class="flex items-center gap-3.5">
                                 <div class="w-10 h-10 sm:w-11 sm:h-11 lg:w-12 lg:h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                                     <i data-lucide="repeat" class="w-5 h-5 lg:w-6 lg:h-6"></i>
@@ -845,446 +858,504 @@
                         </div>
                     </div>
 
-                    <!-- Split Content Section -->
-                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+                    <!-- Distribución de las Tres Listas de Tareas (Inspirado fielmente en diseñosreferencia) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 items-start">
                         
-                        <!-- LEFT COLUMN: Tasks Today & Upcoming (8 cols on lg) -->
-                        <div class="lg:col-span-8 space-y-5">
+                        <!-- CONTENEDOR 1: Todas las tareas -->
+                        <div id="contenedor-todas-tareas" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft flex flex-col">
+                            @php
+                                $currentResumenStatus = $resumenStatus ?? request('task_status', 'all');
+                                $generalTasksList = $generalTasks ?? $tasks->filter(fn($t) => is_null($t->recurring_task_id))->values();
+                                $initialFilteredTasks = $generalTasksList->filter(function($t) use ($currentResumenStatus) {
+                                    if ($currentResumenStatus === 'all' || empty($currentResumenStatus)) return true;
+                                    if ($currentResumenStatus === 'vencida') return $t->isOverdue();
+                                    return $t->status === $currentResumenStatus;
+                                });
+                            @endphp
 
-                            <!-- Card: Tareas de Hoy y del Proyecto -->
-                            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft">
-                                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 gap-2.5 mb-4">
-                                    <div>
-                                        <h3 class="text-sm sm:text-base font-bold text-black dark:text-white flex items-center gap-2">
-                                            <i data-lucide="check-square" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
-                                            <span>Tareas del Proyecto</span>
-                                        </h3>
-                                        <!--<p class="text-xs text-slate-500 dark:text-slate-400">Listado interactivo con actualización rápida de estados.</p>-->
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3.5 gap-2 flex-wrap">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                                        <i data-lucide="clipboard-list" class="w-4 h-4"></i>
                                     </div>
-
-                                    <!-- Filter tabs: Hoy vs Mes -->
-                                    <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs shrink-0 self-start sm:self-auto">
-                                        <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'resumen', 'task_filter' => 'hoy']) }}"
-                                            class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $taskFilter === 'hoy' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
-                                            <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-                                            <span>Hoy</span>
-                                            <span class="px-1.5 py-0.2 text-[10px] rounded-full {{ $taskFilter === 'hoy' ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $todayTasks->count() }}</span>
-                                        </a>
-                                        <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'resumen', 'task_filter' => 'mes']) }}"
-                                            class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $taskFilter === 'mes' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
-                                            <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
-                                            <span>Este Mes</span>
-                                            <span class="px-1.5 py-0.2 text-[10px] rounded-full {{ $taskFilter === 'mes' ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $monthTasks->count() }}</span>
-                                        </a>
-                                    </div>
-                                </div>
-
-                                @if($filteredTasks->isEmpty())
-                                    <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
-                                        <i data-lucide="sparkles" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
-                                        <span>{{ $taskFilter === 'mes' ? 'No hay tareas registradas para este mes en este módulo/proyecto.' : '¡Todo despejado! No hay tareas pendientes para hoy.' }}</span>
-                                    </div>
-                                @else
-                                    <div class="space-y-3 max-h-[560px] overflow-y-auto pr-1">
-                                        @foreach($filteredTasks as $t)
-                                            @php
-                                                $isTodayTask = $t->status !== 'finalizado' && !$t->isOverdue() && (
-                                                    ($t->start_date && substr((string)$t->start_date, 0, 10) === $todayBolivia) ||
-                                                    ($t->end_date && substr((string)$t->end_date, 0, 10) === $todayBolivia) ||
-                                                    (!$t->start_date && !$t->end_date && $t->created_at && $t->created_at->copy()->timezone('America/La_Paz')->toDateString() === $todayBolivia)
-                                                );
-                                                $dueDateStr = null;
-                                                if ($t->end_date) {
-                                                    $dueDateStr = \Carbon\Carbon::parse($t->end_date)->format('d/m/Y') . ($t->end_time ? ' a las ' . substr($t->end_time, 0, 5) : '');
-                                                } elseif ($t->start_date) {
-                                                    $dueDateStr = \Carbon\Carbon::parse($t->start_date)->format('d/m/Y') . ($t->start_time ? ' a las ' . substr($t->start_time, 0, 5) : '');
-                                                }
-                                            @endphp
-                                            @php
-                                                $isPendingApproval = ($t->status === 'en_revision' && $t->needs_review);
-                                                $canApproveReject = ($isPendingApproval && $user->hasFullAccess());
-                                                $isHelperRestricted = ($isPendingApproval && !$user->hasFullAccess());
-                                            @endphp
-
-                                            <div class="p-3 sm:p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 transition shadow-xs space-y-2">
-                                                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
-                                                    <!-- Checkbox & Title -->
-                                                    <div class="flex items-start gap-2.5 min-w-0 flex-1">
-                                                        @if($isHelperRestricted)
-                                                            <div class="mt-0.5 shrink-0" title="En revisión: pendiente de aprobación del administrador">
-                                                                <span class="w-4 h-4 rounded border border-purple-400 bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center cursor-not-allowed">
-                                                                    <i data-lucide="clock" class="w-2.5 h-2.5"></i>
-                                                                </span>
-                                                            </div>
-                                                        @elseif($t->isFutureScheduled())
-                                                            <div class="mt-0.5 shrink-0" title="Tarea programada para una fecha futura: no disponible todavía">
-                                                                <input type="checkbox" disabled
-                                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-0 cursor-not-allowed pointer-events-none">
-                                                            </div>
-                                                        @elseif($canApproveReject)
-                                                            <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="mt-0.5 shrink-0">
-                                                                @csrf
-                                                                @method('PATCH')
-                                                                <input type="hidden" name="status" value="finalizado">
-                                                                <input type="checkbox" onchange="this.form.submit()" title="Marcar como finalizado (aprobar)"
-                                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 accent-emerald-600 cursor-pointer">
-                                                            </form>
-                                                        @else
-                                                            <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="mt-0.5 shrink-0">
-                                                                @csrf
-                                                                @method('PATCH')
-                                                                <input type="hidden" name="status" value="{{ $t->status === 'finalizado' ? 'no_iniciado' : ($t->needs_review && !$user->hasFullAccess() ? 'en_revision' : 'finalizado') }}">
-                                                                <input type="checkbox" onchange="this.form.submit()" {{ $t->status === 'finalizado' ? 'checked' : '' }}
-                                                                    class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer">
-                                                            </form>
-                                                        @endif
-
-                                                        <div class="min-w-0 flex-1">
-                                                            <h4 class="text-xs sm:text-sm font-semibold break-words {{ $t->status === 'finalizado' ? 'line-through text-slate-400 dark:text-slate-500' : ($t->isOverdue() ? 'text-red-600 dark:text-red-400 font-bold' : ($isTodayTask ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-800 dark:text-slate-100')) }}">
-                                                                {{ $t->title }}
-                                                            </h4>
-
-                                                            @if($t->description)
-                                                                <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">{{ $t->description }}</p>
-                                                            @endif
-
-                                                            <!-- Badges row -->
-                                                            <div class="flex flex-wrap items-center gap-1.5 mt-2">
-                                                                @if($t->isOverdue())
-                                                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 flex items-center gap-1">
-                                                                        <i data-lucide="alert-circle" class="w-3 h-3 text-red-600"></i>
-                                                                        <span>Vencida: {{ $dueDateStr }}</span>
-                                                                    </span>
-                                                                @elseif($dueDateStr)
-                                                                    <span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                                                                        <i data-lucide="calendar" class="w-3 h-3 text-indigo-500"></i>
-                                                                        <span>{{ $dueDateStr }}</span>
-                                                                    </span>
-                                                                @endif
-
-                                                                @if($t->module)
-                                                                    <span class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 flex items-center gap-1">
-                                                                        <i data-lucide="box" class="w-3 h-3"></i>
-                                                                        <span>{{ $t->module->name }}</span>
-                                                                    </span>
-                                                                @endif
-
-                                                                <span class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full
-                                                                    {{ $t->priority === 'alta' ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-900/40' : ($t->priority === 'media' ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-900/40' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300') }}">
-                                                                    {{ $t->priority }}
-                                                                </span>
-
-                                                                @if($t->needs_review)
-                                                                    <span class="text-[10px] bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
-                                                                        <i data-lucide="search" class="w-3 h-3"></i>
-                                                                        <span>Revisión</span>
-                                                                    </span>
-                                                                @endif
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- Right actions on task item -->
-                                                    <div class="flex items-center gap-2 self-end sm:self-start shrink-0">
-                                                        <!-- Member Avatars -->
-                                                        <div class="flex items-center -space-x-1.5">
-                                                            @foreach($t->assignedUsers as $u)
-                                                                <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold text-[9px] flex items-center justify-center border-2 border-white dark:border-slate-800" title="{{ $u->name }}">
-                                                                    {{ $u->initials }}
-                                                                </span>
-                                                            @endforeach
-                                                        </div>
-
-                                                        <!-- Selector de estado rápido con iconos de configuración -->
-                                                        @if($user->hasFullAccess())
-                                                            <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                                                                @foreach($quickStatusList as $stBtn)
-                                                                    @php
-                                                                        $stIcon = $stBtn['ruta_icono'] ?? ($estadoIconos[$stBtn['id']] ?? null);
-                                                                        $hasCustomIcon = !empty($stIcon) && file_exists(public_path($stIcon));
-                                                                        $isActive = ($t->status === $stBtn['id']);
-                                                                        $btnColor = $stBtn['color'] ?? ($estadoColores[$stBtn['id']] ?? '#64748b');
-                                                                    @endphp
-                                                                    <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="inline">
-                                                                        @csrf
-                                                                        @method('PATCH')
-                                                                        <input type="hidden" name="status" value="{{ $stBtn['id'] }}">
-                                                                        <button type="submit" title="{{ $stBtn['title'] }}"
-                                                                            class="w-6 h-6 rounded-md flex items-center justify-center transition p-0.5 {{ $isActive ? 'bg-white dark:bg-slate-700 shadow-xs ring-1 ring-slate-300 dark:ring-slate-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700/60' }}">
-                                                                            @if($hasCustomIcon)
-                                                                                <img src="{{ asset($stIcon) }}" alt="{{ $stBtn['title'] }}" class="w-3.5 h-3.5 object-contain rounded-xs transition-transform {{ $isActive ? 'scale-110 drop-shadow-xs' : 'opacity-65 hover:opacity-100' }}">
-                                                                            @else
-                                                                                <i data-lucide="circle" class="w-3.5 h-3.5 {{ $isActive ? 'stroke-[2.5]' : 'stroke-[1.5]' }}" @if($isActive) style="color: {{ $btnColor }}" @endif></i>
-                                                                            @endif
-                                                                        </button>
-                                                                    </form>
-                                                                @endforeach
-                                                            </div>
-                                                        @endif
-
-                                                        <!-- Status badge -->
-                                                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md 
-                                                            {{ $t->status === 'finalizado' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300' : ($t->status === 'en_proceso' ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' : ($t->status === 'en_revision' ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300' : ($t->status === 'rechazado' ? 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'))) }}">
-                                                            {{ str_replace('_', ' ', ucfirst($t->status)) }}
-                                                        </span>
-
-                                                        <!-- Comments Button -->
-                                                        <button type="button" onclick="openCommentsModal({{ $t->id }}, this.getAttribute('data-title'))" data-title="{{ $t->title }}" class="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1 transition" title="Comentarios">
-                                                            <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
-                                                            <span id="task-comment-count-{{ $t->id }}" class="text-[11px] font-semibold {{ $t->comments_count > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400' }}">{{ $t->comments_count }}</span>
-                                                        </button>
-
-                                                        @if(!$user->isHelper())
-                                                            <button onclick='openTaskModal(@json($t->load(["assignedUsers", "subtasks"])))' class="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Editar tarea">
-                                                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                                            </button>
-                                                        @endif
-                                                    </div>
-                                                </div>
-
-                                                <!-- Review Actions (Aprobar / Rechazar estilo Kanban) -->
-                                                @if($canApproveReject)
-                                                    <div class="flex items-center gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800">
-                                                        <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="flex-1">
-                                                            @csrf @method('PATCH')
-                                                            <input type="hidden" name="status" value="finalizado">
-                                                            <button type="submit" class="w-full py-1 text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg transition flex items-center justify-center space-x-1 cursor-pointer">
-                                                                <i data-lucide="check" class="w-3 h-3"></i>
-                                                                <span>Aprobar</span>
-                                                            </button>
-                                                        </form>
-                                                        <form method="POST" action="{{ route('tasks.updateStatus', $t->id) }}" class="flex-1">
-                                                            @csrf @method('PATCH')
-                                                            <input type="hidden" name="status" value="rechazado">
-                                                            <button type="submit" class="w-full py-1 text-[11px] font-semibold bg-red-50 dark:bg-red-950/60 hover:bg-red-100 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 rounded-lg transition flex items-center justify-center space-x-1 cursor-pointer">
-                                                                <i data-lucide="x" class="w-3 h-3"></i>
-                                                                <span>Rechazar</span>
-                                                            </button>
-                                                        </form>
-                                                    </div>
-                                                @endif
-
-                                                <!-- Subtasks preview -->
-                                                @if($t->subtasks->count() > 0)
-                                                    @php
-                                                        $stDone = $t->subtasks->where('status', 'finalizado')->count();
-                                                        $stTotal = $t->subtasks->count();
-                                                        $stPct = round(($stDone / $stTotal) * 100);
-                                                    @endphp
-                                                    <div class="pt-1.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-3">
-                                                        <div class="flex-1 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
-                                                            <div class="bg-indigo-600 dark:bg-indigo-500 h-1.5 rounded-full transition-all" style="width: {{ $stPct }}%"></div>
-                                                        </div>
-                                                        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold shrink-0">
-                                                            Subtareas: {{ $stDone }}/{{ $stTotal }} ({{ $stPct }}%)
-                                                        </span>
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
-
-                            <!-- Card: Desglose y Distribución de Estados -->
-                            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft">
-                                <h3 class="text-xs sm:text-sm font-bold text-black dark:text-white uppercase tracking-wider mb-3 flex items-center justify-between">
-                                    <span>Distribución de Estados</span>
-                                    <span class="text-xs font-semibold text-black dark:text-slate-400">{{ $totalTasksCount }} tareas totales</span>
-                                </h3>
-
-                                <!-- Multi-segment visual progress bar -->
-                                @php
-                                    $pNotStarted = $totalTasksCount > 0 ? round(($notStartedTasksCount / $totalTasksCount) * 100) : 0;
-                                    $pInProgress = $totalTasksCount > 0 ? round(($inProgressTasksCount / $totalTasksCount) * 100) : 0;
-                                    $pInReview = $totalTasksCount > 0 ? round(($inReviewTasksCount / $totalTasksCount) * 100) : 0;
-                                    $pCompleted = $totalTasksCount > 0 ? round(($completedTasksCount / $totalTasksCount) * 100) : 0;
-                                    $pRejected = $totalTasksCount > 0 ? round(($rejectedTasksCount / $totalTasksCount) * 100) : 0;
-                                @endphp
-
-                                <div class="w-full h-3 rounded-full bg-slate-100 dark:bg-slate-800 flex overflow-hidden mb-3">
-                                    <div class="bg-emerald-500 h-full transition-all" style="width: {{ $pCompleted }}%" title="Finalizadas: {{ $completedTasksCount }} ({{ $pCompleted }}%)"></div>
-                                    <div class="bg-amber-500 h-full transition-all" style="width: {{ $pInProgress }}%" title="En Proceso: {{ $inProgressTasksCount }} ({{ $pInProgress }}%)"></div>
-                                    <div class="bg-purple-500 h-full transition-all" style="width: {{ $pInReview }}%" title="En Revisión: {{ $inReviewTasksCount }} ({{ $pInReview }}%)"></div>
-                                    <div class="bg-slate-400 h-full transition-all" style="width: {{ $pNotStarted }}%" title="No Iniciadas: {{ $notStartedTasksCount }} ({{ $pNotStarted }}%)"></div>
-                                    <div class="bg-red-500 h-full transition-all" style="width: {{ $pRejected }}%" title="Rechazadas: {{ $rejectedTasksCount }} ({{ $pRejected }}%)"></div>
-                                </div>
-
-                                <!-- Legend -->
-                                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
-                                    <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                        <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
-                                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                                            <span>Finalizadas</span>
-                                        </div>
-                                        <p class="font-extrabold text-sm text-slate-900 dark:text-white mt-0.5">{{ $completedTasksCount }} <span class="text-[10px] font-normal text-slate-500">({{ $pCompleted }}%)</span></p>
-                                    </div>
-                                    <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                        <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
-                                            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                                            <span>En Proceso</span>
-                                        </div>
-                                        <p class="font-extrabold text-sm text-slate-900 dark:text-white mt-0.5">{{ $inProgressTasksCount }} <span class="text-[10px] font-normal text-slate-500">({{ $pInProgress }}%)</span></p>
-                                    </div>
-                                    <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                        <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
-                                            <span class="w-2 h-2 rounded-full bg-purple-500"></span>
-                                            <span>En Revisión</span>
-                                        </div>
-                                        <p class="font-extrabold text-sm text-slate-900 dark:text-white mt-0.5">{{ $inReviewTasksCount }} <span class="text-[10px] font-normal text-slate-500">({{ $pInReview }}%)</span></p>
-                                    </div>
-                                    <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                        <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
-                                            <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                                            <span>No Iniciadas</span>
-                                        </div>
-                                        <p class="font-extrabold text-sm text-slate-900 dark:text-white mt-0.5">{{ $notStartedTasksCount }} <span class="text-[10px] font-normal text-slate-500">({{ $pNotStarted }}%)</span></p>
-                                    </div>
-                                    <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                                        <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
-                                            <span class="w-2 h-2 rounded-full bg-red-500"></span>
-                                            <span>Rechazadas</span>
-                                        </div>
-                                        <p class="font-extrabold text-sm text-slate-900 dark:text-white mt-0.5">{{ $rejectedTasksCount }} <span class="text-[10px] font-normal text-slate-500">({{ $pRejected }}%)</span></p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- RIGHT COLUMN: Side Widgets (4 cols on lg) -->
-                        <div class="lg:col-span-4 space-y-5">
-
-                            <!-- Widget: Tareas Vencidas o de Atención Urgente -->
-                            <div id="widget-urgencias" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft">
-                                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
-                                    <h4 class="text-xs sm:text-sm font-bold text-black dark:text-white flex items-center gap-2">
-                                        <i data-lucide="alert-octagon" class="w-4 h-4 {{ $overdueCount > 0 ? 'text-red-500' : 'text-emerald-500' }}"></i>
-                                        <span>Bandeja de Urgencias</span>
-                                    </h4>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $overdueCount > 0 ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300' : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300' }}">
-                                        {{ $overdueCount }} Vencida(s)
+                                    <h3 class="text-sm font-bold text-slate-900 dark:text-white truncate">Todas las tareas</h3>
+                                    <span id="all-tasks-count-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shrink-0">
+                                        {{ $initialFilteredTasks->count() }}
                                     </span>
                                 </div>
 
-                                @if($overdueCount === 0)
-                                    <div class="py-6 text-center text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center gap-1.5">
+                                <!-- Filtro por estado en «Todas las tareas» -->
+                                <div class="relative flex items-center shrink-0">
+                                    <i data-lucide="filter" class="w-3.5 h-3.5 absolute left-2.5 text-slate-400 pointer-events-none"></i>
+                                    <select id="resumen-all-tasks-status-filter" onchange="filterAllTasksByStatus(this.value)"
+                                        class="pl-8 pr-7 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-semibold appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500/20 transition shadow-2xs"
+                                        title="Filtrar por estado">
+                                        <option value="all" {{ $currentResumenStatus === 'all' ? 'selected' : '' }}>Todos los estados</option>
+                                        <option value="vencida" {{ $currentResumenStatus === 'vencida' ? 'selected' : '' }}>Vencida</option>
+                                        <option value="en_proceso" {{ $currentResumenStatus === 'en_proceso' ? 'selected' : '' }}>En proceso</option>
+                                        <option value="en_revision" {{ $currentResumenStatus === 'en_revision' ? 'selected' : '' }}>En revisión</option>
+                                        <option value="no_iniciado" {{ $currentResumenStatus === 'no_iniciado' ? 'selected' : '' }}>No iniciada</option>
+                                        <option value="finalizado" {{ $currentResumenStatus === 'finalizado' ? 'selected' : '' }}>Finalizada</option>
+                                        <option value="rechazado" {{ $currentResumenStatus === 'rechazado' ? 'selected' : '' }}>Rechazada</option>
+                                    </select>
+                                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 absolute right-2 text-slate-400 pointer-events-none"></i>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2.5 max-h-[580px] overflow-y-auto pr-1 flex-1">
+                                <!-- Mensaje cuando el filtro de estado no arroja resultados -->
+                                <div id="all-tasks-empty-filter-msg" class="{{ ($generalTasksList->isNotEmpty() && $initialFilteredTasks->isEmpty()) ? '' : 'hidden' }} text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                                    <i data-lucide="filter-x" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
+                                    <span>No hay tareas con el estado seleccionado.</span>
+                                </div>
+
+                                @forelse($generalTasksList as $t)
+                                    @php
+                                        $isOverdue = $t->isOverdue();
+                                        $isToday = $t->status !== 'finalizado' && !$isOverdue && (
+                                            ($t->start_date && substr((string)$t->start_date, 0, 10) === $todayBolivia) ||
+                                            ($t->end_date && substr((string)$t->end_date, 0, 10) === $todayBolivia) ||
+                                            (!$t->start_date && !$t->end_date && $t->created_at && $t->created_at->copy()->timezone('America/La_Paz')->toDateString() === $todayBolivia)
+                                        );
+
+                                        $matchesInitial = true;
+                                        if ($currentResumenStatus === 'vencida') {
+                                            $matchesInitial = $isOverdue;
+                                        } elseif ($currentResumenStatus !== 'all' && !empty($currentResumenStatus)) {
+                                            $matchesInitial = ($t->status === $currentResumenStatus);
+                                        }
+
+                                        if ($isOverdue) {
+                                            $iconName = 'alert-triangle';
+                                            $iconBoxClass = 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400';
+                                            $badgeLabel = 'Vencida';
+                                            $badgeClass = 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300';
+                                            $dueRef = $t->end_date ? \Carbon\Carbon::parse($t->end_date) : ($t->start_date ? \Carbon\Carbon::parse($t->start_date) : null);
+                                            $temporalText = 'Debía realizarse: ' . ($dueRef ? $dueRef->locale('es')->isoFormat('D MMM') : 'Ayer');
+                                        } elseif ($t->status === 'en_proceso') {
+                                            $iconName = 'clock';
+                                            $iconBoxClass = 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400';
+                                            $badgeLabel = 'En proceso';
+                                            $badgeClass = 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300';
+                                            $timeStr = $t->start_time ? substr($t->start_time, 0, 5) : ($t->end_time ? substr($t->end_time, 0, 5) : 'Hoy');
+                                            $temporalText = $isToday ? ('Hoy · ' . $timeStr) : ($t->end_date ? 'Vence: ' . \Carbon\Carbon::parse($t->end_date)->locale('es')->isoFormat('D MMM') : 'En curso');
+                                        } elseif ($t->status === 'en_revision') {
+                                            $iconName = 'search';
+                                            $iconBoxClass = 'bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400';
+                                            $badgeLabel = 'En revisión';
+                                            $badgeClass = 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300';
+                                            $temporalText = $t->end_date ? 'Límite: ' . \Carbon\Carbon::parse($t->end_date)->locale('es')->isoFormat('D MMM') : 'Pendiente de aprobación';
+                                        } elseif ($t->status === 'finalizado') {
+                                            $iconName = 'check-circle-2';
+                                            $iconBoxClass = 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400';
+                                            $badgeLabel = 'Finalizada';
+                                            $badgeClass = 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300';
+                                            $temporalText = 'Completada' . ($t->updated_at ? ' · ' . $t->updated_at->locale('es')->isoFormat('D MMM') : '');
+                                        } elseif ($t->status === 'rechazado') {
+                                            $iconName = 'x-circle';
+                                            $iconBoxClass = 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400';
+                                            $badgeLabel = 'Rechazada';
+                                            $badgeClass = 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300';
+                                            $temporalText = 'Requiere ajustes';
+                                        } else {
+                                            $iconName = $t->recurring_task_id ? 'repeat' : 'circle';
+                                            $iconBoxClass = $t->recurring_task_id ? 'bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400';
+                                            $badgeLabel = 'No iniciada';
+                                            $badgeClass = 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
+                                            $temporalText = $isToday ? 'Hoy · ' . ($t->start_time ? substr($t->start_time, 0, 5) : 'Sin hora') : ($t->start_date ? 'Programada: ' . \Carbon\Carbon::parse($t->start_date)->locale('es')->isoFormat('D MMM') : 'Por iniciar');
+                                        }
+                                    @endphp
+                                    <div onclick='openTaskModal(@json($t->load(["assignedUsers", "subtasks"])))'
+                                        data-status="{{ $t->status }}"
+                                        data-overdue="{{ $isOverdue ? '1' : '0' }}"
+                                        class="all-tasks-item {{ !$matchesInitial ? 'hidden' : '' }} p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-transparent bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/80 transition flex items-center justify-between gap-3 cursor-pointer group">
+                                        <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                                            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl {{ $iconBoxClass }} flex items-center justify-center shrink-0">
+                                                <i data-lucide="{{ $iconName }}" class="w-4 h-4"></i>
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <h4 class="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">
+                                                        {{ $t->title }}
+                                                    </h4>
+                                                    <span class="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded-md {{ $badgeClass }} shrink-0">
+                                                        {{ $badgeLabel }}
+                                                    </span>
+                                                </div>
+                                                <p class="text-[11px] {{ $isOverdue ? 'text-red-600/90 dark:text-red-400/90 font-medium' : 'text-slate-500 dark:text-slate-400' }} mt-0.5 truncate">
+                                                    {{ $temporalText }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        @if($t->assignedUsers->isNotEmpty())
+                                            <div class="flex items-center -space-x-1 shrink-0">
+                                                @foreach($t->assignedUsers->take(2) as $au)
+                                                    <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
+                                                        {{ $au->initials }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+                                @empty
+                                    <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                                        <i data-lucide="clipboard-x" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
+                                        <span>No hay tareas registradas para este criterio.</span>
+                                    </div>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        <!-- CONTENEDOR 2: Tareas periódicas con selector Hoy / Mes / Año -->
+                        <div id="contenedor-periodicas" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft flex flex-col">
+                            @php
+                                $activePeriodicPeriod = $periodicPeriod ?? request('periodic_period', 'hoy');
+                                if (!in_array($activePeriodicPeriod, ['hoy', 'mes', 'anio'])) {
+                                    $activePeriodicPeriod = 'hoy';
+                                }
+                                $activePeriodicCount = match($activePeriodicPeriod) {
+                                    'mes' => ($monthRecurringTasks ?? collect())->count(),
+                                    'anio' => ($yearRecurringTasks ?? collect())->count(),
+                                    default => ($todayRecurringTasks ?? collect())->count(),
+                                };
+                            @endphp
+
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3.5 gap-2 flex-wrap">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                        <i data-lucide="repeat" class="w-4 h-4"></i>
+                                    </div>
+                                    <h3 class="text-sm font-bold text-slate-900 dark:text-white truncate">Tareas periódicas</h3>
+                                    <span id="periodic-tasks-count-badge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shrink-0">
+                                        {{ $activePeriodicCount }}
+                                    </span>
+                                </div>
+
+                                <!-- Selector de periodos compacto y control de calendario -->
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    <button type="button"
+                                        id="resumen-periodic-calendar-btn"
+                                        onclick="onPeriodicCalendarIconClick()"
+                                        title="Ver tareas periódicas del mes actual"
+                                        class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl border {{ $activePeriodicPeriod === 'mes' ? 'bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-700' : 'bg-slate-50 text-slate-600 border-slate-200/80 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-400' }} flex items-center justify-center transition shadow-2xs cursor-pointer">
+                                        <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                                    </button>
+
+                                    <div class="relative flex items-center shrink-0">
+                                        <select id="resumen-periodic-period-filter" onchange="changePeriodicPeriod(this.value)"
+                                            class="pl-3 pr-7 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-semibold appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-emerald-500/20 transition shadow-2xs"
+                                            title="Seleccionar periodo de tareas periódicas">
+                                            <option value="hoy" {{ $activePeriodicPeriod === 'hoy' ? 'selected' : '' }}>Hoy</option>
+                                            <option value="mes" {{ $activePeriodicPeriod === 'mes' ? 'selected' : '' }}>Mes</option>
+                                            <option value="anio" {{ $activePeriodicPeriod === 'anio' ? 'selected' : '' }}>Año</option>
+                                        </select>
+                                        <i data-lucide="chevron-down" class="w-3.5 h-3.5 absolute right-2 text-slate-400 pointer-events-none"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="max-h-[580px] overflow-y-auto pr-1 flex-1">
+                                <!-- Lista: Hoy -->
+                                <div id="periodic-tasks-list-hoy" class="space-y-2.5 {{ $activePeriodicPeriod === 'hoy' ? '' : 'hidden' }}">
+                                    @forelse($todayRecurringTasks as $rtTask)
+                                        @php
+                                            $recRule = $rtTask->recurringTask;
+                                            $recLabel = $recRule ? ucfirst($recRule->recurrence ?? 'Diaria') : 'Periódica';
+                                            
+                                            if ($rtTask->status === 'finalizado') {
+                                                $badgeLabel = 'Finalizada';
+                                                $badgeClass = 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300';
+                                                $iconName = 'check-circle-2';
+                                                $iconBoxClass = 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400';
+                                            } elseif ($rtTask->isOverdue()) {
+                                                $badgeLabel = 'Vencida';
+                                                $badgeClass = 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300';
+                                                $iconName = 'alert-triangle';
+                                                $iconBoxClass = 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400';
+                                            } elseif ($rtTask->status === 'en_proceso') {
+                                                $badgeLabel = 'En proceso';
+                                                $badgeClass = 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300';
+                                                $iconName = 'clock';
+                                                $iconBoxClass = 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400';
+                                            } elseif ($rtTask->status === 'en_revision') {
+                                                $badgeLabel = 'En revisión';
+                                                $badgeClass = 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300';
+                                                $iconName = 'search';
+                                                $iconBoxClass = 'bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400';
+                                            } else {
+                                                $badgeLabel = $recLabel;
+                                                $badgeClass = 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300';
+                                                $iconName = 'repeat';
+                                                $iconBoxClass = 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400';
+                                            }
+
+                                            $timeStr = $rtTask->start_time ? substr($rtTask->start_time, 0, 5) : ($recRule?->start_time ? substr($recRule->start_time, 0, 5) : 'Todo el día');
+                                            $temporalText = 'Hoy · ' . $timeStr;
+                                        @endphp
+                                        <div onclick='openTaskModal(@json($rtTask->load(["assignedUsers", "subtasks"])))'
+                                            class="periodic-task-item p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-transparent bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/80 transition flex items-center justify-between gap-3 cursor-pointer group">
+                                            <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                                                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl {{ $iconBoxClass }} flex items-center justify-center shrink-0">
+                                                    <i data-lucide="{{ $iconName }}" class="w-4 h-4"></i>
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                                        <h4 class="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
+                                                            {{ $rtTask->title }}
+                                                        </h4>
+                                                        <span class="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded-md {{ $badgeClass }} shrink-0">
+                                                            {{ $badgeLabel }}
+                                                        </span>
+                                                    </div>
+                                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                                        {{ $temporalText }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            @if($rtTask->assignedUsers->isNotEmpty())
+                                                <div class="flex items-center -space-x-1 shrink-0">
+                                                    @foreach($rtTask->assignedUsers->take(2) as $au)
+                                                        <span class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
+                                                            {{ $au->initials }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @empty
+                                        <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                                            <i data-lucide="calendar-check" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
+                                            <span>No hay tareas periódicas programadas para hoy.</span>
+                                        </div>
+                                    @endforelse
+                                </div>
+
+                                <!-- Lista: Mes -->
+                                <div id="periodic-tasks-list-mes" class="space-y-2.5 {{ $activePeriodicPeriod === 'mes' ? '' : 'hidden' }}">
+                                    @forelse($monthRecurringTasks ?? [] as $rtTask)
+                                        @php
+                                            $recRule = $rtTask->recurringTask;
+                                            $recLabel = $recRule ? ucfirst($recRule->recurrence ?? 'Diaria') : 'Periódica';
+                                            
+                                            if ($rtTask->status === 'finalizado') {
+                                                $badgeLabel = 'Finalizada';
+                                                $badgeClass = 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300';
+                                                $iconName = 'check-circle-2';
+                                                $iconBoxClass = 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400';
+                                            } elseif ($rtTask->isOverdue()) {
+                                                $badgeLabel = 'Vencida';
+                                                $badgeClass = 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300';
+                                                $iconName = 'alert-triangle';
+                                                $iconBoxClass = 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400';
+                                            } elseif ($rtTask->status === 'en_proceso') {
+                                                $badgeLabel = 'En proceso';
+                                                $badgeClass = 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300';
+                                                $iconName = 'clock';
+                                                $iconBoxClass = 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400';
+                                            } elseif ($rtTask->status === 'en_revision') {
+                                                $badgeLabel = 'En revisión';
+                                                $badgeClass = 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300';
+                                                $iconName = 'search';
+                                                $iconBoxClass = 'bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400';
+                                            } else {
+                                                $badgeLabel = $recLabel;
+                                                $badgeClass = 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300';
+                                                $iconName = 'repeat';
+                                                $iconBoxClass = 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400';
+                                            }
+
+                                            $isToday = $rtTask->start_date && substr((string)$rtTask->start_date, 0, 10) === $todayBolivia;
+                                            $timeStr = $rtTask->start_time ? substr($rtTask->start_time, 0, 5) : ($recRule?->start_time ? substr($recRule->start_time, 0, 5) : null);
+                                            if ($isToday) {
+                                                $temporalText = 'Hoy · ' . ($timeStr ?: 'Todo el día');
+                                            } else {
+                                                $dateObj = \Carbon\Carbon::parse($rtTask->start_date);
+                                                $temporalText = $dateObj->locale('es')->isoFormat('D MMM') . ($timeStr ? ' · ' . $timeStr : '');
+                                            }
+                                        @endphp
+                                        <div onclick='openTaskModal(@json($rtTask->load(["assignedUsers", "subtasks"])))'
+                                            class="periodic-task-item p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-transparent bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/80 transition flex items-center justify-between gap-3 cursor-pointer group">
+                                            <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                                                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl {{ $iconBoxClass }} flex items-center justify-center shrink-0">
+                                                    <i data-lucide="{{ $iconName }}" class="w-4 h-4"></i>
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                                        <h4 class="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
+                                                            {{ $rtTask->title }}
+                                                        </h4>
+                                                        <span class="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded-md {{ $badgeClass }} shrink-0">
+                                                            {{ $badgeLabel }}
+                                                        </span>
+                                                    </div>
+                                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                                        {{ $temporalText }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            @if($rtTask->assignedUsers->isNotEmpty())
+                                                <div class="flex items-center -space-x-1 shrink-0">
+                                                    @foreach($rtTask->assignedUsers->take(2) as $au)
+                                                        <span class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
+                                                            {{ $au->initials }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @empty
+                                        <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                                            <i data-lucide="calendar-range" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
+                                            <span>No hay tareas periódicas programadas para este mes.</span>
+                                        </div>
+                                    @endforelse
+                                </div>
+
+                                <!-- Lista: Año -->
+                                <div id="periodic-tasks-list-anio" class="space-y-2.5 {{ $activePeriodicPeriod === 'anio' ? '' : 'hidden' }}">
+                                    @forelse($yearRecurringTasks ?? [] as $rtTask)
+                                        @php
+                                            $recRule = $rtTask->recurringTask;
+                                            $recLabel = $recRule ? ucfirst($recRule->recurrence ?? 'Diaria') : 'Periódica';
+                                            
+                                            if ($rtTask->status === 'finalizado') {
+                                                $badgeLabel = 'Finalizada';
+                                                $badgeClass = 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300';
+                                                $iconName = 'check-circle-2';
+                                                $iconBoxClass = 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400';
+                                            } elseif ($rtTask->isOverdue()) {
+                                                $badgeLabel = 'Vencida';
+                                                $badgeClass = 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300';
+                                                $iconName = 'alert-triangle';
+                                                $iconBoxClass = 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400';
+                                            } elseif ($rtTask->status === 'en_proceso') {
+                                                $badgeLabel = 'En proceso';
+                                                $badgeClass = 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300';
+                                                $iconName = 'clock';
+                                                $iconBoxClass = 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400';
+                                            } elseif ($rtTask->status === 'en_revision') {
+                                                $badgeLabel = 'En revisión';
+                                                $badgeClass = 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300';
+                                                $iconName = 'search';
+                                                $iconBoxClass = 'bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400';
+                                            } else {
+                                                $badgeLabel = $recLabel;
+                                                $badgeClass = 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300';
+                                                $iconName = 'repeat';
+                                                $iconBoxClass = 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400';
+                                            }
+
+                                            $isToday = $rtTask->start_date && substr((string)$rtTask->start_date, 0, 10) === $todayBolivia;
+                                            $timeStr = $rtTask->start_time ? substr($rtTask->start_time, 0, 5) : ($recRule?->start_time ? substr($recRule->start_time, 0, 5) : null);
+                                            if ($isToday) {
+                                                $temporalText = 'Hoy · ' . ($timeStr ?: 'Todo el día');
+                                            } else {
+                                                $dateObj = \Carbon\Carbon::parse($rtTask->start_date);
+                                                $temporalText = $dateObj->locale('es')->isoFormat('D MMM YYYY') . ($timeStr ? ' · ' . $timeStr : '');
+                                            }
+                                        @endphp
+                                        <div onclick='openTaskModal(@json($rtTask->load(["assignedUsers", "subtasks"])))'
+                                            class="periodic-task-item p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-transparent bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/80 transition flex items-center justify-between gap-3 cursor-pointer group">
+                                            <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                                                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl {{ $iconBoxClass }} flex items-center justify-center shrink-0">
+                                                    <i data-lucide="{{ $iconName }}" class="w-4 h-4"></i>
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                                        <h4 class="text-xs sm:text-[13px] font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
+                                                            {{ $rtTask->title }}
+                                                        </h4>
+                                                        <span class="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded-md {{ $badgeClass }} shrink-0">
+                                                            {{ $badgeLabel }}
+                                                        </span>
+                                                    </div>
+                                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                                        {{ $temporalText }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            @if($rtTask->assignedUsers->isNotEmpty())
+                                                <div class="flex items-center -space-x-1 shrink-0">
+                                                    @foreach($rtTask->assignedUsers->take(2) as $au)
+                                                        <span class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
+                                                            {{ $au->initials }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @empty
+                                        <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                                            <i data-lucide="calendar" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
+                                            <span>No hay tareas periódicas programadas para este año.</span>
+                                        </div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CONTENEDOR 3: Tareas vencidas -->
+                        <div id="contenedor-tareas-vencidas" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft flex flex-col">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3.5">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div class="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                                    </div>
+                                    <h3 class="text-sm font-bold text-slate-900 dark:text-white truncate">Tareas vencidas</h3>
+                                </div>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-full {{ $overdueCount > 0 ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' }} shrink-0">
+                                    {{ $overdueCount }}
+                                </span>
+                            </div>
+
+                            <div class="space-y-2.5 max-h-[580px] overflow-y-auto pr-1 flex-1">
+                                @forelse($overdueTasks as $ot)
+                                    @php
+                                        $dueDateFormatted = $ot->end_date ? \Carbon\Carbon::parse($ot->end_date)->locale('es')->isoFormat('D MMM') : ($ot->start_date ? \Carbon\Carbon::parse($ot->start_date)->locale('es')->isoFormat('D MMM') : 'Fecha superada');
+                                        $temporalText = 'Debía realizarse: ' . $dueDateFormatted . ($ot->end_time ? ' · ' . substr($ot->end_time, 0, 5) : '');
+                                    @endphp
+                                    <div onclick='openTaskModal(@json($ot->load(["assignedUsers", "subtasks"])))'
+                                        class="overdue-task-item p-2.5 sm:p-3 rounded-xl border border-red-200/50 dark:border-transparent bg-red-50/40 dark:bg-red-950/20 hover:bg-red-50/70 dark:hover:bg-red-950/40 transition flex items-center justify-between gap-3 cursor-pointer group">
+                                        <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                                            <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                                                <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <h4 class="text-xs sm:text-[13px] font-bold text-red-900 dark:text-red-200 truncate group-hover:text-red-700 dark:group-hover:text-red-300 transition">
+                                                        {{ $ot->title }}
+                                                    </h4>
+                                                    <span class="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded-md bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 shrink-0">
+                                                        Vencida
+                                                    </span>
+                                                </div>
+                                                <p class="text-[11px] text-red-600/90 dark:text-red-400/90 mt-0.5 truncate font-medium">
+                                                    {{ $temporalText }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        @if($ot->assignedUsers->isNotEmpty())
+                                            <div class="flex items-center -space-x-1 shrink-0">
+                                                @foreach($ot->assignedUsers->take(2) as $au)
+                                                    <span class="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
+                                                        {{ $au->initials }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </div>
+                                @empty
+                                    <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
                                         <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                                             <i data-lucide="check" class="w-5 h-5"></i>
                                         </div>
-                                        <p class="font-bold text-slate-700 dark:text-slate-300 text-xs">¡Excelente! Todo al día</p>
-                                        <span class="text-[11px]">No hay tareas vencidas pendientes en este proyecto.</span>
+                                        <span class="font-bold text-slate-700 dark:text-slate-300">¡Todo al día!</span>
+                                        <span class="text-[11px]">No hay tareas vencidas pendientes.</span>
                                     </div>
-                                @else
-                                    <div class="space-y-2 max-h-48 overflow-y-auto pr-0.5">
-                                        @foreach($overdueTasks->take(4) as $ot)
-                                            <div class="p-2.5 rounded-xl border border-red-200/60 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 flex items-start justify-between gap-2">
-                                                <div class="min-w-0 flex-1">
-                                                    <h5 class="text-xs font-bold text-red-900 dark:text-red-200 truncate">{{ $ot->title }}</h5>
-                                                    <span class="text-[10px] text-red-600 dark:text-red-400 block mt-0.5">
-                                                        Venció: {{ $ot->end_date ?? $ot->start_date }}
-                                                    </span>
-                                                </div>
-                                                <button onclick='openTaskModal(@json($ot->load(["assignedUsers", "subtasks"])))' class="p-1 text-red-600 hover:text-red-800 rounded bg-white dark:bg-slate-900 shrink-0 shadow-xs" title="Ver tarea">
-                                                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                                                </button>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
+                                @endforelse
                             </div>
-
-                            <!-- Widget: Incidencias Recientes -->
-                            <div id="widget-incidencias" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft">
-                                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
-                                    <h4 class="text-xs sm:text-sm font-bold text-black dark:text-white flex items-center gap-2">
-                                        <i data-lucide="alert-circle" class="w-4 h-4 text-rose-500"></i>
-                                        <span>Incidencias Activas</span>
-                                    </h4>
-                                    <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'incidencias']) }}" class="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
-                                        Ver todas
-                                    </a>
-                                </div>
-
-                                @php $activeIncidents = $incidents->where('estado', '!=', 'resuelta')->take(3); @endphp
-                                @if($activeIncidents->isEmpty())
-                                    <p class="text-center py-5 text-slate-400 dark:text-slate-500 text-xs">No hay incidencias abiertas reportadas.</p>
-                                @else
-                                    <div class="space-y-2">
-                                        @foreach($activeIncidents as $inc)
-                                            <div class="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1">
-                                                <div class="flex items-start justify-between gap-2">
-                                                    <h5 class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate flex-1">{{ $inc->titulo }}</h5>
-                                                    <span class="text-[9px] font-bold px-1.5 py-0.2 rounded uppercase shrink-0
-                                                        {{ $inc->prioridad === 'urgente' ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' }}">
-                                                        {{ $inc->prioridad }}
-                                                    </span>
-                                                </div>
-                                                <div class="flex items-center justify-between text-[10px] text-slate-400">
-                                                    <span>Por: {{ $inc->reporter ? $inc->reporter->name : 'Anon' }}</span>
-                                                    <span class="font-semibold text-amber-600 dark:text-amber-400">{{ ucfirst($inc->estado) }}</span>
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
-
-                            <!-- Widget: Enlaces Rápidos del Proyecto -->
-                            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft">
-                                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
-                                    <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                        <i data-lucide="link" class="w-4 h-4 text-indigo-500"></i>
-                                        <span>Enlaces del Proyecto</span>
-                                    </h4>
-                                    <a href="{{ route('dashboard', ['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => 'enlaces']) }}" class="text-[11px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
-                                        Ver todos
-                                    </a>
-                                </div>
-
-                                @php $quickLinks = $activeProject->links->take(3); @endphp
-                                @if($quickLinks->isEmpty())
-                                    <p class="text-center py-4 text-slate-400 dark:text-slate-500 text-xs">No hay enlaces guardados.</p>
-                                @else
-                                    <div class="space-y-2">
-                                        @foreach($quickLinks as $ql)
-                                            <a href="{{ $ql->url }}" target="_blank" class="p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-indigo-50/50 dark:hover:bg-slate-800 transition flex items-center justify-between gap-2 group">
-                                                <div class="min-w-0 flex-1">
-                                                    <p class="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 truncate">{{ $ql->name }}</p>
-                                                    <span class="text-[10px] text-slate-400 truncate block">{{ $ql->url }}</span>
-                                                </div>
-                                                <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 shrink-0"></i>
-                                            </a>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
-
-                            <!-- Widget: Equipo del Proyecto -->
-                            <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft">
-                                <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-3">
-                                    <i data-lucide="users-2" class="w-4 h-4 text-emerald-500"></i>
-                                    <span>Equipo del Proyecto ({{ $activeProject->members->count() }})</span>
-                                </h4>
-
-                                <div class="divide-y divide-slate-100 dark:divide-slate-800">
-                                    @foreach($activeProject->members->take(5) as $mem)
-                                        <div class="py-2 flex items-center justify-between gap-2">
-                                            <div class="flex items-center gap-2 min-w-0">
-                                                <span class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold text-xs flex items-center justify-center shrink-0">
-                                                    {{ $mem->initials }}
-                                                </span>
-                                                <div class="min-w-0">
-                                                    <p class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{{ $mem->name }}</p>
-                                                    <span class="text-[10px] text-slate-400 truncate block">{{ $mem->role }}</span>
-                                                </div>
-                                            </div>
-                                            <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-
                         </div>
+
                     </div>
                 </div>
 
@@ -1412,22 +1483,113 @@
                             <!-- Tabs de Filtro: Tareas de Hoy vs Tareas del Mes -->
                             <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs overflow-x-auto no-scrollbar max-w-full">
                                 @php
-                                    $todayVisibleCount = $selectedUserId ? $todayTasks->filter(fn($task) => !$task->isDailyRecurring() && $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $todayTasks->filter(fn($task) => !$task->isDailyRecurring())->count();
-                                    $monthVisibleCount = $selectedUserId ? $monthTasks->filter(fn($task) => !$task->isDailyRecurring() && $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $monthTasks->filter(fn($task) => !$task->isDailyRecurring())->count();
-                                    $calFilteredTasks = $filteredTasks->filter(fn($t) => !$t->isDailyRecurring());
+                                    $taskFilterParams = array_filter([
+                                        'project_id' => $activeProject->id,
+                                        'module_id' => $activeModuleId,
+                                        'view' => $activeView,
+                                        'user_id' => $selectedUserId,
+                                        'task_filter_option' => $taskFilterOption,
+                                        'task_search' => $taskSearch,
+                                    ]);
+                                    $taskMatchesFilter = function($task) use ($selectedUserId, $taskFilterOption, $taskSearch) {
+                                        if ($selectedUserId && !$task->assignedUsers->contains('id', (int)$selectedUserId)) return false;
+
+                                        // Buscador por nombre
+                                        if ($taskSearch !== '') {
+                                            $title = mb_strtolower($task->title ?? '');
+                                            if (!str_contains($title, mb_strtolower($taskSearch))) {
+                                                return false;
+                                            }
+                                        }
+
+                                        // Filtro Unificado
+                                        if (empty($taskFilterOption) || $taskFilterOption === 'status:all' || $taskFilterOption === 'priority:all') {
+                                            return true;
+                                        }
+
+                                        [$fType, $fVal] = array_pad(explode(':', $taskFilterOption, 2), 2, '');
+                                        if ($fType === 'status') {
+                                            return $fVal === 'all' || $task->status === $fVal;
+                                        }
+                                        if ($fType === 'priority') {
+                                            $pNorm = strtolower(trim($task->priority === 'urgente' ? 'alta' : ($task->priority ?? 'media')));
+                                            return $fVal === 'all' || $pNorm === strtolower($fVal);
+                                        }
+                                        if ($fType === 'due') {
+                                            $isOverdue = $task->isOverdue();
+                                            if ($fVal === 'vencidas') return $isOverdue;
+                                            if ($fVal === 'no_vencidas') return !$isOverdue;
+                                        }
+                                        return true;
+                                    };
+                                    $todayVisibleCount = $todayTasks->filter($taskMatchesFilter)->count();
+                                    $monthVisibleCount = $monthTasks->filter($taskMatchesFilter)->count();
+                                    $calFilteredTasks = $filteredTasks;
+                                    $totalVisibleTasks = $calFilteredTasks->filter($taskMatchesFilter)->count();
                                 @endphp
-                                <a id="tab-tasks-today" href="{{ route('dashboard', array_filter(['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => $activeView, 'task_filter' => 'hoy', 'user_id' => $selectedUserId])) }}"
+                                <a id="tab-tasks-today" href="{{ route('dashboard', array_merge($taskFilterParams, ['task_filter' => 'hoy'])) }}"
                                     class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $taskFilter === 'hoy' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
                                     <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
                                     <span>Tareas de Hoy</span>
                                     <span id="badge-count-today" class="px-1.5 py-0.2 text-[10px] rounded-full {{ $taskFilter === 'hoy' ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $todayVisibleCount }}</span>
                                 </a>
-                                <a id="tab-tasks-month" href="{{ route('dashboard', array_filter(['project_id' => $activeProject->id, 'module_id' => $activeModuleId, 'view' => $activeView, 'task_filter' => 'mes', 'user_id' => $selectedUserId])) }}"
+                                <a id="tab-tasks-month" href="{{ route('dashboard', array_merge($taskFilterParams, ['task_filter' => 'mes'])) }}"
                                     class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $taskFilter === 'mes' ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
                                     <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
                                     <span>Tareas del Mes</span>
                                     <span id="badge-count-month" class="px-1.5 py-0.2 text-[10px] rounded-full {{ $taskFilter === 'mes' ? 'bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $monthVisibleCount }}</span>
                                 </a>
+                            </div>
+                        </div>
+
+                        <!-- Barra de Filtros: Selector Unificado y Buscador por Nombre -->
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pb-3 mb-3 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
+                            <!-- Selector Unificado de Filtros -->
+                            <div class="relative w-full sm:w-[210px] shrink-0">
+                                <i data-lucide="filter" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                                <select id="task-filter-select" onchange="onTaskUnifiedFilterChange()"
+                                    class="w-full pl-8 pr-7 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-semibold appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500/20 transition truncate"
+                                    title="Filtrar tareas">
+                                    <option value="" {{ empty($taskFilterOption) ? 'selected' : '' }} class="font-semibold bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">Todas las tareas</option>
+
+                                    <optgroup label="Estados" class="font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800">
+                                        @foreach($quickStatusList as $st)
+                                            <option value="status:{{ $st['id'] }}" {{ $taskFilterOption === 'status:'.$st['id'] ? 'selected' : '' }} class="font-normal bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+                                                {{ $st['title'] }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+
+                                    <optgroup label="Prioridades" class="font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800">
+                                        @foreach($prioridadesList as $prio)
+                                            <option value="priority:{{ $prio['id'] }}" {{ $taskFilterOption === 'priority:'.$prio['id'] ? 'selected' : '' }} class="font-normal bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">
+                                                {{ $prio['title'] }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+
+                                    <optgroup label="Vencimiento" class="font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800">
+                                        <option value="due:vencidas" {{ $taskFilterOption === 'due:vencidas' ? 'selected' : '' }} class="font-normal bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">Vencidas</option>
+                                        <option value="due:no_vencidas" {{ $taskFilterOption === 'due:no_vencidas' ? 'selected' : '' }} class="font-normal bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">No vencidas</option>
+                                    </optgroup>
+                                </select>
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                            </div>
+
+                            <!-- Buscador por nombre de tarea -->
+                            <div class="relative flex-1 min-w-0">
+                                <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
+                                <input type="text" id="task-search-input" value="{{ $taskSearch }}"
+                                    oninput="onTaskSearchInput(this.value)"
+                                    placeholder="Buscar tarea..."
+                                    autocomplete="off"
+                                    class="w-full pl-8 pr-7 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 focus:bg-white dark:bg-slate-800 dark:hover:bg-slate-700/80 dark:focus:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs font-medium placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/20 transition truncate"
+                                    title="Buscar tarea por nombre">
+                                <button type="button" id="btn-clear-task-search" onclick="clearTaskSearch()"
+                                    class="{{ empty($taskSearch) ? 'hidden' : '' }} absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                                    title="Limpiar búsqueda">
+                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                </button>
                             </div>
                         </div>
 
@@ -1457,18 +1619,18 @@
                             <div class="space-y-6">
                                 @foreach($groupedTasks as $dateKey => $groupTasks)
                                     @php
-                                        $visibleInGroupCount = $selectedUserId ? $groupTasks->filter(fn($task) => $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $groupTasks->count();
+                                        $visibleInGroupCount = $groupTasks->filter($taskMatchesFilter)->count();
                                     @endphp
-                                    <div class="task-date-group {{ $selectedUserId && $visibleInGroupCount === 0 ? 'hidden' : '' }}" data-group-date="{{ $dateKey }}">
+                                    <div class="task-date-group {{ $visibleInGroupCount === 0 ? 'hidden' : '' }}" data-group-date="{{ $dateKey }}">
                                         @if($taskFilter === 'mes')
                                             <div class="flex items-center gap-2 pb-2 mb-3 border-b border-slate-200 dark:border-slate-800">
                                                 <i data-lucide="calendar" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
-                                                <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                                <h4 class="{{ $dateKey === $todayBolivia ? 'text-sm font-bold text-black dark:text-slate-100' : 'text-xs font-bold text-slate-800 dark:text-slate-200' }}">
                                                     @if($dateKey === 'sin_fecha')
                                                         Sin Fecha Definida
                                                     @else
                                                         {{ ucfirst(\Carbon\Carbon::parse($dateKey)->locale('es')->isoFormat('dddd D \d\e MMMM, YYYY')) }}
-                                                        @if($dateKey === $todayBolivia)
+                                                    @if($dateKey === $todayBolivia)
                                                             <span class="text-[9px] bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.2 rounded ml-1">Hoy</span>
                                                         @endif
                                                     @endif
@@ -1482,13 +1644,18 @@
                                         <div class="space-y-3">
                                             @foreach($groupTasks as $t)
                                                 @php
-                                                    $isAssignedToSelected = !$selectedUserId || $t->assignedUsers->contains('id', (int)$selectedUserId);
                                                     $isPendingApproval = ($t->status === 'en_revision' && $t->needs_review);
                                                     $canApproveReject = ($isPendingApproval && $user->hasFullAccess());
                                                     $isHelperRestricted = ($isPendingApproval && !$user->hasFullAccess());
+                                                    $tNormalizedPrio = strtolower(trim($t->priority === 'urgente' ? 'alta' : ($t->priority ?? 'media')));
+                                                    $isCardInitiallyVisible = $taskMatchesFilter($t);
                                                 @endphp
-                                                <div class="task-list-card group p-3 sm:p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 transition shadow-xs space-y-2.5 {{ $isAssignedToSelected ? '' : 'hidden' }}"
+                                                <div class="task-list-card group p-3 sm:p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 transition shadow-xs space-y-2.5 {{ $isCardInitiallyVisible ? '' : 'hidden' }}"
                                                     data-task-id="{{ $t->id }}"
+                                                    data-title="{{ mb_strtolower($t->title ?? '') }}"
+                                                    data-status="{{ $t->status }}"
+                                                    data-priority="{{ $tNormalizedPrio }}"
+                                                    data-overdue="{{ $t->isOverdue() ? '1' : '0' }}"
                                                     data-assigned-users="{{ json_encode($t->assignedUsers->pluck('id')->all()) }}">
                                                     <!-- Fila Superior: Checkbox + Título + Descripción + Badges (Ancho Completo) -->
                                                     <div class="flex items-start gap-2.5 min-w-0">
@@ -1683,12 +1850,34 @@
                                 @endforeach
                             </div>
 
-                            @php
-                                $totalVisibleTasks = $selectedUserId ? $calFilteredTasks->filter(fn($task) => $task->assignedUsers->contains('id', (int)$selectedUserId))->count() : $calFilteredTasks->count();
-                            @endphp
-                            <div id="cal-list-empty-user" class="{{ $totalVisibleTasks === 0 ? '' : 'hidden' }} text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
-                                No hay tareas asignadas a este usuario para este período.
+                            <div id="cal-list-empty-state" class="{{ ($totalVisibleTasks === 0 && ($selectedUserId || $taskFilterOption || $taskSearch)) ? '' : 'hidden' }} text-center py-12 px-4 space-y-3">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center mx-auto">
+                                    <i data-lucide="filter-x" class="w-6 h-6"></i>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="text-xs font-semibold text-slate-700 dark:text-slate-300" id="cal-list-empty-msg">
+                                        @if($taskSearch && $taskFilterOption)
+                                            No se encontraron tareas que coincidan con la búsqueda y el filtro seleccionado.
+                                        @elseif($taskSearch)
+                                            No se encontraron tareas con el término "{{ $taskSearch }}".
+                                        @elseif($taskFilterOption)
+                                            No se encontraron tareas con el filtro seleccionado.
+                                        @elseif($selectedUserId)
+                                            No hay tareas asignadas a este usuario para este período.
+                                        @else
+                                            No se encontraron tareas para los criterios seleccionados.
+                                        @endif
+                                    </p>
+                                    <p class="text-[11px] text-slate-400 dark:text-slate-500">
+                                        Intenta cambiar el filtro seleccionado o limpiar el término de búsqueda.
+                                    </p>
+                                </div>
+                                <button type="button" onclick="resetTaskFilters(true)" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 text-xs font-semibold transition shadow-2xs cursor-pointer">
+                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                                    <span>Restablecer filtros y búsqueda</span>
+                                </button>
                             </div>
+                            <div id="cal-list-empty-user" class="hidden"></div>
                         @endif
                         </div>
                     </div>
@@ -2404,13 +2593,37 @@
                                         @php
                                             $wTheme = $matrixData['weeks'][$dayInfo['weekIndex']];
                                             $isMatrixDayToday = ($dayInfo['date'] === $todayBolivia);
+                                            $isMatrixDayFuture = ($dayInfo['date'] > $todayBolivia);
                                         @endphp
-                                        <th class="p-1 min-w-[38px] sm:min-w-[42px] text-center border-r border-slate-100 dark:border-slate-800/80 {{ $isMatrixDayToday ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : '' }}">
+                                        <th class="p-1 min-w-[38px] sm:min-w-[42px] text-center border-r border-slate-100 dark:border-slate-800/80 transition-colors
+                                            @if($isMatrixDayToday)
+                                                {{ $wTheme['todayHeaderBg'] }} {{ $wTheme['todayBorder'] }}
+                                            @elseif($isMatrixDayFuture)
+                                                bg-slate-100/60 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500
+                                            @else
+                                                bg-white dark:bg-slate-900
+                                            @endif">
                                             <div class="flex flex-col items-center justify-center py-1">
-                                                <span class="text-[10px] font-semibold lowercase leading-tight {{ $isMatrixDayToday ? 'text-indigo-600 dark:text-indigo-400 font-bold' : ($dayInfo['isWeekend'] ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300') }}">
+                                                <span class="text-[10px] leading-tight lowercase
+                                                    @if($isMatrixDayToday)
+                                                        {{ $wTheme['todayText'] }}
+                                                    @elseif($isMatrixDayFuture)
+                                                        text-slate-400 dark:text-slate-500 font-medium
+                                                    @elseif($dayInfo['isWeekend'])
+                                                        text-slate-400 dark:text-slate-500 font-semibold
+                                                    @else
+                                                        text-slate-600 dark:text-slate-300 font-semibold
+                                                    @endif">
                                                     {{ $dayInfo['dayName'] }}
                                                 </span>
-                                                <span class="text-xs font-bold leading-tight mt-0.5 {{ $isMatrixDayToday ? 'w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs' : 'text-slate-800 dark:text-slate-200' }}">
+                                                <span class="text-xs leading-tight mt-0.5
+                                                    @if($isMatrixDayToday)
+                                                        w-5 h-5 rounded-full {{ $wTheme['todayBadge'] }} flex items-center justify-center shadow-xs font-black
+                                                    @elseif($isMatrixDayFuture)
+                                                        text-slate-400 dark:text-slate-500 font-semibold
+                                                    @else
+                                                        text-slate-800 dark:text-slate-200 font-bold
+                                                    @endif">
                                                     {{ $dayInfo['day'] }}
                                                 </span>
                                             </div>
@@ -2460,8 +2673,14 @@
                                                 $cell = $row['cells'][$d] ?? ['scheduled' => false];
                                                 $wTheme = $matrixData['weeks'][$dayInfo['weekIndex']];
                                                 $isMatrixDayToday = ($dayInfo['date'] === $todayBolivia);
+                                                $isMatrixDayFuture = ($dayInfo['date'] > $todayBolivia);
                                             @endphp
-                                            <td class="p-1 min-w-[38px] sm:min-w-[42px] text-center align-middle border-r border-slate-100 dark:border-slate-800/60 {{ $isMatrixDayToday ? 'bg-indigo-50/20 dark:bg-indigo-950/20' : '' }}">
+                                            <td class="p-1 min-w-[38px] sm:min-w-[42px] text-center align-middle border-r border-slate-100 dark:border-slate-800/60 transition-colors
+                                                @if($isMatrixDayToday)
+                                                    {{ $wTheme['todayCellBg'] }}
+                                                @elseif($isMatrixDayFuture)
+                                                    bg-slate-100/40 dark:bg-slate-800/30
+                                                @endif">
                                                 @if($cell['scheduled'])
                                                     <div class="flex flex-col items-center justify-center gap-1 mx-auto py-0.5">
                                                         @if(!empty($cell['can_approve_reject']))
@@ -2494,7 +2713,7 @@
                                                         @endif
 
                                                         @php
-                                                            $isCellFuture = !empty($cell['is_future']);
+                                                            $isCellFuture = !empty($cell['is_future']) || $isMatrixDayFuture;
                                                             $cellTitle = $cell['is_completed']
                                                                 ? 'Completado en ' . $cell['date'] . ' (clic para desmarcar)'
                                                                 : (!empty($cell['is_pending_approval'])
@@ -2515,7 +2734,19 @@
                                                             data-week-bg="{{ $wTheme['checkBg'] }}"
                                                             data-week-pending="{{ $wTheme['checkPending'] }}"
                                                             class="matrix-check-btn w-6 h-6 sm:w-7 sm:h-7 rounded-md mx-auto flex items-center justify-center transition-all duration-150 transform select-none
-                                                            {{ $cell['is_completed'] ? $wTheme['checkBg'] : (!empty($cell['is_pending_approval']) ? 'border-2 border-dashed border-purple-400 dark:border-purple-500 bg-purple-50/40 dark:bg-purple-950/20 text-purple-500' : 'border-2 ' . $wTheme['checkPending'] . ' text-transparent ' . ($isCellFuture ? '' : 'hover:scale-105 active:scale-90')) }}
+                                                            @if($cell['is_completed'])
+                                                                @if($isCellFuture)
+                                                                    bg-slate-400 dark:bg-slate-600 text-white border border-slate-400 dark:border-slate-600 opacity-60
+                                                                @else
+                                                                    {{ $wTheme['checkBg'] }}
+                                                                @endif
+                                                            @elseif(!empty($cell['is_pending_approval']))
+                                                                border-2 border-dashed border-purple-400 dark:border-purple-500 bg-purple-50/40 dark:bg-purple-950/20 text-purple-500
+                                                            @elseif($isCellFuture)
+                                                                border-2 border-slate-300 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800/60 text-slate-300 dark:text-slate-600 opacity-60
+                                                            @else
+                                                                border-2 {{ $wTheme['checkPending'] }} text-transparent hover:scale-105 active:scale-90
+                                                            @endif
                                                             {{ empty($cell['can_toggle']) ? 'cursor-not-allowed' : 'cursor-pointer' }}"
                                                             title="{{ $cellTitle }}"
                                                             {{ empty($cell['can_toggle']) ? 'disabled' : '' }}>
@@ -3475,44 +3706,6 @@
         }
     });
 
-    function toggleDesktopMoreMenu() {
-        const dropdown = document.getElementById('desktop-more-dropdown');
-        const chevron = document.getElementById('desktop-more-chevron');
-        const btn = document.getElementById('btn-desktop-more');
-        if (!dropdown) return;
-        const isHidden = dropdown.classList.contains('hidden');
-        if (isHidden) {
-            dropdown.classList.remove('hidden');
-            if (chevron) chevron.classList.add('rotate-180');
-            if (btn) btn.setAttribute('aria-expanded', 'true');
-            if (window.lucide) lucide.createIcons({ root: dropdown });
-        } else {
-            closeDesktopMoreMenu();
-        }
-    }
-
-    function closeDesktopMoreMenu() {
-        const dropdown = document.getElementById('desktop-more-dropdown');
-        const chevron = document.getElementById('desktop-more-chevron');
-        const btn = document.getElementById('btn-desktop-more');
-        if (!dropdown || dropdown.classList.contains('hidden')) return;
-        dropdown.classList.add('hidden');
-        if (chevron) chevron.classList.remove('rotate-180');
-        if (btn) btn.setAttribute('aria-expanded', 'false');
-    }
-
-    document.addEventListener('click', (e) => {
-        const container = document.getElementById('desktop-more-menu-container');
-        if (container && !container.contains(e.target)) {
-            closeDesktopMoreMenu();
-        }
-    });
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeDesktopMoreMenu();
-        }
-    });
 
     // -------------------------------------------------------------
     // Lista de Tareas: Matriz mensual con checks por fecha
@@ -4907,6 +5100,147 @@
     ];
 
     let currentFilteredUserId = '{{ $selectedUserId ?? '' }}';
+    let currentUnifiedFilter = '{{ $taskFilterOption ?? '' }}';
+    let currentSearchTerm = '{{ addslashes($taskSearch ?? '') }}'.toLowerCase();
+
+    window.onResumenUserFilterChange = function(userId) {
+        const url = new URL(window.location.href);
+        if (userId) {
+            url.searchParams.set('user_id', userId);
+        } else {
+            url.searchParams.delete('user_id');
+        }
+        const statusSelect = document.getElementById('resumen-all-tasks-status-filter');
+        if (statusSelect && statusSelect.value && statusSelect.value !== 'all') {
+            url.searchParams.set('task_status', statusSelect.value);
+        }
+        const periodicSelect = document.getElementById('resumen-periodic-period-filter');
+        if (periodicSelect && periodicSelect.value && periodicSelect.value !== 'hoy') {
+            url.searchParams.set('periodic_period', periodicSelect.value);
+        } else {
+            url.searchParams.delete('periodic_period');
+        }
+        url.searchParams.set('view', 'resumen');
+        window.location.href = url.toString();
+    };
+
+    window.changePeriodicPeriod = function(period) {
+        const listHoy = document.getElementById('periodic-tasks-list-hoy');
+        const listMes = document.getElementById('periodic-tasks-list-mes');
+        const listAnio = document.getElementById('periodic-tasks-list-anio');
+        const badge = document.getElementById('periodic-tasks-count-badge');
+        const select = document.getElementById('resumen-periodic-period-filter');
+        const calBtn = document.getElementById('resumen-periodic-calendar-btn');
+
+        if (!listHoy || !listMes || !listAnio) return;
+
+        listHoy.classList.add('hidden');
+        listMes.classList.add('hidden');
+        listAnio.classList.add('hidden');
+
+        let count = 0;
+        if (period === 'mes') {
+            listMes.classList.remove('hidden');
+            count = listMes.querySelectorAll('.periodic-task-item').length;
+            if (calBtn) {
+                calBtn.className = 'w-7 h-7 sm:w-8 sm:h-8 rounded-xl border bg-emerald-50 text-emerald-600 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-700 flex items-center justify-center transition shadow-2xs cursor-pointer';
+            }
+        } else if (period === 'anio') {
+            listAnio.classList.remove('hidden');
+            count = listAnio.querySelectorAll('.periodic-task-item').length;
+            if (calBtn) {
+                calBtn.className = 'w-7 h-7 sm:w-8 sm:h-8 rounded-xl border bg-slate-50 text-slate-600 border-slate-200/80 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-400 flex items-center justify-center transition shadow-2xs cursor-pointer';
+            }
+        } else {
+            period = 'hoy';
+            listHoy.classList.remove('hidden');
+            count = listHoy.querySelectorAll('.periodic-task-item').length;
+            if (calBtn) {
+                calBtn.className = 'w-7 h-7 sm:w-8 sm:h-8 rounded-xl border bg-slate-50 text-slate-600 border-slate-200/80 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-emerald-950/50 dark:hover:text-emerald-400 flex items-center justify-center transition shadow-2xs cursor-pointer';
+            }
+        }
+
+        if (select) {
+            select.value = period;
+        }
+        if (badge) {
+            badge.textContent = count;
+        }
+        const subnavCounter = document.getElementById('subnav-periodicas-counter');
+        if (subnavCounter) {
+            subnavCounter.textContent = count;
+        }
+
+        try {
+            const url = new URL(window.location.href);
+            if (period && period !== 'hoy') {
+                url.searchParams.set('periodic_period', period);
+            } else {
+                url.searchParams.delete('periodic_period');
+            }
+            window.history.replaceState({}, '', url.toString());
+        } catch(e) {}
+    };
+
+    window.onPeriodicCalendarIconClick = function() {
+        const select = document.getElementById('resumen-periodic-period-filter');
+        const current = select ? select.value : 'hoy';
+        if (current === 'mes') {
+            changePeriodicPeriod('hoy');
+        } else {
+            changePeriodicPeriod('mes');
+        }
+    };
+
+    window.filterAllTasksByStatus = function(selectedStatus) {
+        const items = document.querySelectorAll('.all-tasks-item');
+        const emptyMsg = document.getElementById('all-tasks-empty-filter-msg');
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const itemStatus = item.getAttribute('data-status');
+            const itemOverdue = item.getAttribute('data-overdue') === '1';
+
+            let matches = false;
+            if (!selectedStatus || selectedStatus === 'all') {
+                matches = true;
+            } else if (selectedStatus === 'vencida') {
+                matches = itemOverdue;
+            } else {
+                matches = (itemStatus === selectedStatus);
+            }
+
+            if (matches) {
+                item.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                item.classList.add('hidden');
+            }
+        });
+
+        if (emptyMsg) {
+            if (visibleCount === 0 && items.length > 0) {
+                emptyMsg.classList.remove('hidden');
+            } else {
+                emptyMsg.classList.add('hidden');
+            }
+        }
+
+        const countBadge = document.getElementById('all-tasks-count-badge');
+        if (countBadge) {
+            countBadge.textContent = visibleCount;
+        }
+
+        try {
+            const url = new URL(window.location.href);
+            if (selectedStatus && selectedStatus !== 'all') {
+                url.searchParams.set('task_status', selectedStatus);
+            } else {
+                url.searchParams.delete('task_status');
+            }
+            window.history.replaceState({}, '', url.toString());
+        } catch(e) {}
+    };
 
     function getFilteredEvents(userId) {
         if (!userId) return allCalendarEvents;
@@ -4917,12 +5251,73 @@
         });
     }
 
-    const todayTasksUsers = @json($todayTasks->filter(fn($t) => !$t->isDailyRecurring())->map(fn($t) => ['id' => $t->id, 'users' => $t->assignedUsers->pluck('id')->all()]));
-    const monthTasksUsers = @json($monthTasks->filter(fn($t) => !$t->isDailyRecurring())->map(fn($t) => ['id' => $t->id, 'users' => $t->assignedUsers->pluck('id')->all()]));
+    const todayTasksMeta = {!! json_encode($todayTasks->map(fn($t) => [
+        'id' => $t->id,
+        'title' => mb_strtolower($t->title ?? ''),
+        'users' => $t->assignedUsers->pluck('id')->all(),
+        'status' => $t->status,
+        'priority' => strtolower(trim($t->priority === 'urgente' ? 'alta' : ($t->priority ?? 'media'))),
+        'overdue' => $t->isOverdue() ? 1 : 0
+    ])->values()->all()) !!};
+    const monthTasksMeta = {!! json_encode($monthTasks->map(fn($t) => [
+        'id' => $t->id,
+        'title' => mb_strtolower($t->title ?? ''),
+        'users' => $t->assignedUsers->pluck('id')->all(),
+        'status' => $t->status,
+        'priority' => strtolower(trim($t->priority === 'urgente' ? 'alta' : ($t->priority ?? 'media'))),
+        'overdue' => $t->isOverdue() ? 1 : 0
+    ])->values()->all()) !!};
+    const todayTasksUsers = todayTasksMeta;
+    const monthTasksUsers = monthTasksMeta;
 
-    function filterTaskListByUser(userId) {
+    function taskMatchesAllFilters(taskMeta, userId, filterOption, searchTerm) {
+        if (userId && !taskMeta.users.map(Number).includes(Number(userId))) {
+            return false;
+        }
+        if (searchTerm) {
+            const cleanTerm = searchTerm.toLowerCase().trim();
+            if (cleanTerm && !taskMeta.title.includes(cleanTerm)) {
+                return false;
+            }
+        }
+        if (!filterOption || filterOption === 'status:all' || filterOption === 'priority:all') {
+            return true;
+        }
+        const parts = filterOption.split(':');
+        const type = parts[0];
+        const val = parts[1] || '';
+        if (type === 'status') {
+            return val === 'all' || taskMeta.status === val;
+        }
+        if (type === 'priority') {
+            return val === 'all' || taskMeta.priority === val;
+        }
+        if (type === 'due') {
+            if (val === 'vencidas') return taskMeta.overdue === 1;
+            if (val === 'no_vencidas') return taskMeta.overdue === 0;
+        }
+        return true;
+    }
+
+    function applyAllTaskFilters() {
+        const filterSelect = document.getElementById('task-filter-select');
+        const searchInput = document.getElementById('task-search-input');
+        const clearSearchBtn = document.getElementById('btn-clear-task-search');
+
+        if (filterSelect) currentUnifiedFilter = filterSelect.value || '';
+        if (searchInput) currentSearchTerm = (searchInput.value || '').trim().toLowerCase();
+
+        if (clearSearchBtn) {
+            if (searchInput && searchInput.value.length > 0) {
+                clearSearchBtn.classList.remove('hidden');
+            } else {
+                clearSearchBtn.classList.add('hidden');
+            }
+        }
+
         const cards = document.querySelectorAll('.task-list-card');
-        const emptyMsg = document.getElementById('cal-list-empty-user');
+        const emptyMsg = document.getElementById('cal-list-empty-msg');
+        const emptyContainer = document.getElementById('cal-list-empty-state') || document.getElementById('cal-list-empty-user');
         const groups = document.querySelectorAll('.task-date-group');
         let visibleCount = 0;
 
@@ -4932,8 +5327,34 @@
                 assigned = JSON.parse(card.getAttribute('data-assigned-users') || '[]');
             } catch(e) {}
 
-            const matches = !userId || assigned.map(Number).includes(Number(userId));
-            if (matches) {
+            // 1. Filtro Usuario
+            const matchesUser = !currentFilteredUserId || assigned.map(Number).includes(Number(currentFilteredUserId));
+
+            // 2. Buscador por nombre
+            const cardTitle = (card.getAttribute('data-title') || '').toLowerCase();
+            const matchesSearch = !currentSearchTerm || cardTitle.includes(currentSearchTerm);
+
+            // 3. Filtro Unificado
+            let matchesFilter = true;
+            if (currentUnifiedFilter && currentUnifiedFilter !== 'status:all' && currentUnifiedFilter !== 'priority:all') {
+                const parts = currentUnifiedFilter.split(':');
+                const type = parts[0];
+                const val = parts[1] || '';
+                if (type === 'status') {
+                    const cardStatus = card.getAttribute('data-status') || '';
+                    matchesFilter = (val === 'all' || cardStatus === val);
+                } else if (type === 'priority') {
+                    const cardPriority = card.getAttribute('data-priority') || '';
+                    matchesFilter = (val === 'all' || cardPriority === val);
+                } else if (type === 'due') {
+                    const isOverdue = card.getAttribute('data-overdue') === '1';
+                    if (val === 'vencidas') matchesFilter = isOverdue;
+                    else if (val === 'no_vencidas') matchesFilter = !isOverdue;
+                }
+            }
+
+            const isVisible = matchesUser && matchesSearch && matchesFilter;
+            if (isVisible) {
                 card.classList.remove('hidden');
                 visibleCount++;
             } else {
@@ -4955,44 +5376,138 @@
             }
         });
 
-        if (emptyMsg) {
+        // Mensaje de estado vacío cuando no hay tareas coincidentes
+        if (emptyContainer) {
             if (cards.length > 0 && visibleCount === 0) {
-                emptyMsg.classList.remove('hidden');
+                emptyContainer.classList.remove('hidden');
+                if (emptyMsg) {
+                    if (currentSearchTerm && currentUnifiedFilter) {
+                        emptyMsg.textContent = 'No se encontraron tareas que coincidan con la búsqueda y el filtro seleccionado.';
+                    } else if (currentSearchTerm) {
+                        emptyMsg.textContent = 'No se encontraron tareas con el término "' + (searchInput ? searchInput.value : '') + '".';
+                    } else if (currentUnifiedFilter) {
+                        emptyMsg.textContent = 'No se encontraron tareas con el filtro seleccionado.';
+                    } else if (currentFilteredUserId) {
+                        emptyMsg.textContent = 'No hay tareas asignadas a este usuario para este período.';
+                    } else {
+                        emptyMsg.textContent = 'No se encontraron tareas para los criterios seleccionados.';
+                    }
+                }
             } else {
-                emptyMsg.classList.add('hidden');
+                emptyContainer.classList.add('hidden');
             }
         }
 
-        updateTabCountsForUser(userId);
+        // Actualizar contadores de tabs y sincronizar enlaces
+        updateTabCounts();
+
+        // Sincronizar parámetros en URL sin recargar la página
+        try {
+            const url = new URL(window.location);
+            if (currentFilteredUserId) {
+                url.searchParams.set('user_id', currentFilteredUserId);
+            } else {
+                url.searchParams.delete('user_id');
+            }
+            if (currentUnifiedFilter) {
+                url.searchParams.set('task_filter_option', currentUnifiedFilter);
+            } else {
+                url.searchParams.delete('task_filter_option');
+            }
+            if (currentSearchTerm) {
+                url.searchParams.set('task_search', currentSearchTerm);
+            } else {
+                url.searchParams.delete('task_search');
+            }
+            url.searchParams.delete('task_status');
+            url.searchParams.delete('task_priority');
+            url.searchParams.delete('task_due');
+            window.history.replaceState({}, '', url);
+        } catch(e) {}
+
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+
         syncCalendarListHeight();
     }
 
-    function updateTabCountsForUser(userId) {
+    function updateTabCounts() {
         const todayBadge = document.getElementById('badge-count-today');
         const monthBadge = document.getElementById('badge-count-month');
 
-        const countToday = userId
-            ? todayTasksUsers.filter(t => t.users.map(Number).includes(Number(userId))).length
-            : todayTasksUsers.length;
-        const countMonth = userId
-            ? monthTasksUsers.filter(t => t.users.map(Number).includes(Number(userId))).length
-            : monthTasksUsers.length;
+        const countToday = todayTasksMeta.filter(t => taskMatchesAllFilters(t, currentFilteredUserId, currentUnifiedFilter, currentSearchTerm)).length;
+        const countMonth = monthTasksMeta.filter(t => taskMatchesAllFilters(t, currentFilteredUserId, currentUnifiedFilter, currentSearchTerm)).length;
 
         if (todayBadge) todayBadge.textContent = countToday;
         if (monthBadge) monthBadge.textContent = countMonth;
 
-        ['tab-tasks-today', 'tab-tasks-month'].forEach(tabId => {
+        const mobHoyBadge = document.querySelector('#subnav-cal-btn-hoy .tab-counter-badge');
+        const mobMesBadge = document.querySelector('#subnav-cal-btn-mes .tab-counter-badge');
+        if (mobHoyBadge) mobHoyBadge.textContent = countToday;
+        if (mobMesBadge) mobMesBadge.textContent = countMonth;
+
+        ['tab-tasks-today', 'tab-tasks-month', 'subnav-cal-btn-hoy', 'subnav-cal-btn-mes'].forEach(tabId => {
             const tabEl = document.getElementById(tabId);
             if (tabEl) {
                 const url = new URL(tabEl.href, window.location.origin);
-                if (userId) {
-                    url.searchParams.set('user_id', userId);
-                } else {
-                    url.searchParams.delete('user_id');
-                }
+                if (currentFilteredUserId) url.searchParams.set('user_id', currentFilteredUserId);
+                else url.searchParams.delete('user_id');
+
+                if (currentUnifiedFilter) url.searchParams.set('task_filter_option', currentUnifiedFilter);
+                else url.searchParams.delete('task_filter_option');
+
+                if (currentSearchTerm) url.searchParams.set('task_search', currentSearchTerm);
+                else url.searchParams.delete('task_search');
+
+                url.searchParams.delete('task_status');
+                url.searchParams.delete('task_priority');
+                url.searchParams.delete('task_due');
+
                 tabEl.href = url.pathname + url.search;
             }
         });
+    }
+
+    function onTaskUnifiedFilterChange() {
+        applyAllTaskFilters();
+    }
+
+    function onTaskSearchInput(val) {
+        applyAllTaskFilters();
+    }
+
+    function clearTaskSearch() {
+        const searchInput = document.getElementById('task-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+        }
+        currentSearchTerm = '';
+        applyAllTaskFilters();
+    }
+
+    function resetTaskFilters(includeUser = false) {
+        const filterSelect = document.getElementById('task-filter-select');
+        const searchInput = document.getElementById('task-search-input');
+
+        if (filterSelect) filterSelect.value = '';
+        if (searchInput) searchInput.value = '';
+
+        currentUnifiedFilter = '';
+        currentSearchTerm = '';
+
+        if (includeUser && currentFilteredUserId) {
+            onUserFilterChange('');
+            return;
+        }
+
+        applyAllTaskFilters();
+    }
+
+    function filterTaskListByUser(userId) {
+        currentFilteredUserId = userId ? String(userId) : '';
+        applyAllTaskFilters();
     }
 
     function onUserFilterChange(userId) {
@@ -5011,19 +5526,8 @@
             window.calendarInstance.addEventSource(newEvents);
         }
 
-        // 2. Aplicar filtro a la lista de tareas del proyecto
-        filterTaskListByUser(currentFilteredUserId);
-
-        // 3. Sincronizar parámetro URL sin recargar la página
-        try {
-            const url = new URL(window.location);
-            if (currentFilteredUserId) {
-                url.searchParams.set('user_id', currentFilteredUserId);
-            } else {
-                url.searchParams.delete('user_id');
-            }
-            window.history.replaceState({}, '', url);
-        } catch(e) {}
+        // 2. Aplicar filtros combinados a la lista de tareas del proyecto
+        applyAllTaskFilters();
     }
 
     // FullCalendar Initialization
@@ -5114,9 +5618,7 @@
             });
             window.calendarInstance.render();
             applyCalendarViewMode(isInitialSplit);
-            if (currentFilteredUserId) {
-                filterTaskListByUser(currentFilteredUserId);
-            }
+            applyAllTaskFilters();
 
             window.addEventListener('theme-toggled', () => {
                 if (window.calendarInstance) {
@@ -5518,19 +6020,13 @@
     }
 }
 
-/* Menú desplegable «Más» en navegación superior: Opción CheckList en modo claro */
-html:not(.dark) #desktop-more-dropdown a {
-    background-color: #FFFFFF !important;
-    color: #000000 !important;
-    font-weight: 700 !important;
+/* Eliminación de bordes o contornos en modo oscuro en las tareas de los tres contenedores de Resumen */
+html.dark #contenedor-todas-tareas .all-tasks-item,
+html.dark #contenedor-periodicas .periodic-task-item,
+html.dark #contenedor-tareas-vencidas .overdue-task-item {
+    border-color: transparent !important;
+    box-shadow: none !important;
 }
-html:not(.dark) #desktop-more-dropdown a:hover {
-    background-color: #FFFFFF !important;
-    color: #000000 !important;
-}
-html:not(.dark) #desktop-more-dropdown a span {
-    color: #000000 !important;
-    font-weight: 700 !important;
-}
+
 </style>
 @endpush
