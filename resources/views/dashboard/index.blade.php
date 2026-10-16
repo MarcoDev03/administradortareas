@@ -859,10 +859,10 @@
                     </div>
 
                     <!-- Distribución de las Tres Listas de Tareas (Inspirado fielmente en diseñosreferencia) -->
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 items-start">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 items-start lg:items-stretch">
                         
                         <!-- CONTENEDOR 1: Todas las tareas -->
-                        <div id="contenedor-todas-tareas" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft flex flex-col">
+                        <div id="contenedor-todas-tareas" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft flex flex-col lg:h-[650px]">
                             @php
                                 $currentResumenStatus = $resumenStatus ?? request('task_status', 'all');
                                 $generalTasksList = $generalTasks ?? $tasks->filter(fn($t) => is_null($t->recurring_task_id))->values();
@@ -873,7 +873,7 @@
                                 });
                             @endphp
 
-                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3.5 gap-2 flex-wrap">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3.5 gap-2 flex-wrap shrink-0">
                                 <div class="flex items-center gap-2 min-w-0">
                                     <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
                                         <i data-lucide="clipboard-list" class="w-4 h-4"></i>
@@ -902,7 +902,7 @@
                                 </div>
                             </div>
 
-                            <div class="space-y-2.5 max-h-[580px] overflow-y-auto pr-1 flex-1">
+                            <div class="space-y-2.5 max-h-[580px] lg:max-h-none overflow-y-auto pr-1 pb-1 flex-1 min-h-0">
                                 <!-- Mensaje cuando el filtro de estado no arroja resultados -->
                                 <div id="all-tasks-empty-filter-msg" class="{{ ($generalTasksList->isNotEmpty() && $initialFilteredTasks->isEmpty()) ? '' : 'hidden' }} text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
                                     <i data-lucide="filter-x" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
@@ -1007,7 +1007,7 @@
                         </div>
 
                         <!-- CONTENEDOR 2: Tareas periódicas con selector Hoy / Mes / Año -->
-                        <div id="contenedor-periodicas" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft flex flex-col">
+                        <div id="contenedor-periodicas" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft flex flex-col lg:h-[650px]">
                             @php
                                 $activePeriodicPeriod = $periodicPeriod ?? request('periodic_period', 'hoy');
                                 if (!in_array($activePeriodicPeriod, ['hoy', 'mes', 'anio'])) {
@@ -1020,7 +1020,7 @@
                                 };
                             @endphp
 
-                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3.5 gap-2 flex-wrap">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3.5 gap-2 flex-wrap shrink-0">
                                 <div class="flex items-center gap-2 min-w-0">
                                     <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
                                         <i data-lucide="repeat" class="w-4 h-4"></i>
@@ -1054,7 +1054,7 @@
                                 </div>
                             </div>
 
-                            <div class="max-h-[580px] overflow-y-auto pr-1 flex-1">
+                            <div class="max-h-[580px] lg:max-h-none overflow-y-auto pr-1 pb-1 flex-1 min-h-0">
                                 <!-- Lista: Hoy -->
                                 <div id="periodic-tasks-list-hoy" class="space-y-2.5 {{ $activePeriodicPeriod === 'hoy' ? '' : 'hidden' }}">
                                     @forelse($todayRecurringTasks as $rtTask)
@@ -1295,8 +1295,8 @@
                         </div>
 
                         <!-- CONTENEDOR 3: Tareas vencidas -->
-                        <div id="contenedor-tareas-vencidas" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft flex flex-col">
-                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3.5">
+                        <div id="contenedor-tareas-vencidas" class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-4 sm:p-5 shadow-soft flex flex-col lg:h-[650px]">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3.5 shrink-0">
                                 <div class="flex items-center gap-2.5 min-w-0">
                                     <div class="w-8 h-8 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
                                         <i data-lucide="alert-triangle" class="w-4 h-4"></i>
@@ -1308,7 +1308,7 @@
                                 </span>
                             </div>
 
-                            <div class="space-y-2.5 max-h-[580px] overflow-y-auto pr-1 flex-1">
+                            <div class="space-y-2.5 max-h-[580px] lg:max-h-none overflow-y-auto pr-1 pb-1 flex-1 min-h-0">
                                 @forelse($overdueTasks as $ot)
                                     @php
                                         $dueDateFormatted = $ot->end_date ? \Carbon\Carbon::parse($ot->end_date)->locale('es')->isoFormat('D MMM') : ($ot->start_date ? \Carbon\Carbon::parse($ot->start_date)->locale('es')->isoFormat('D MMM') : 'Fecha superada');
@@ -6026,6 +6026,15 @@ html.dark #contenedor-periodicas .periodic-task-item,
 html.dark #contenedor-tareas-vencidas .overdue-task-item {
     border-color: transparent !important;
     box-shadow: none !important;
+}
+
+/* Altura uniforme y scroll vertical interno en los tres contenedores principales del panel de tareas (Escritorio) */
+@media (min-width: 1024px) {
+    #contenedor-todas-tareas,
+    #contenedor-periodicas,
+    #contenedor-tareas-vencidas {
+        height: 650px;
+    }
 }
 
 </style>
