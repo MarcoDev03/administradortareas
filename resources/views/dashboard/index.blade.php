@@ -121,9 +121,7 @@
     <!-- Header App Logo -->
     <div class="p-4 sm:p-5 border-b border-slate-800/90 flex items-center justify-between">
         <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-[#0014C6] border border-slate-700/60 flex items-center justify-center shrink-0 shadow-md p-1">
-                <img src="{{ asset('icons/iconoround.png') }}" alt="NegocioManager" class="w-8 h-8 object-contain">
-            </div>
+            <img src="{{ asset('icons/iconoround.png') }}" alt="NegocioManager" class="w-10 h-10 rounded-xl object-contain shrink-0" style="border-radius: 0.75rem; overflow: hidden;">
             <div>
                 <h1 class="font-bold text-base sm:text-lg text-white tracking-tight leading-tight">NegocioManager</h1>
                 <!--<span class="text-[10px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Panel Central</span> -->
@@ -3715,7 +3713,7 @@
 
     async function toggleMatrixCheck(buttonEl, taskId) {
         if (!buttonEl || !taskId) return;
-        if (matrixInFlight[taskId]) return;
+        if (matrixInFlight[taskId] || buttonEl.disabled) return;
 
         const wasCompleted = buttonEl.getAttribute('data-completed') === 'true';
         const needsReview = buttonEl.getAttribute('data-needs-review') === 'true';
@@ -3741,6 +3739,8 @@
         }
 
         matrixInFlight[taskId] = true;
+        buttonEl.disabled = true;
+        buttonEl.classList.add('pointer-events-none');
 
         let targetStatus;
         if (wasCompleted) {
@@ -3755,10 +3755,14 @@
 
         // Optimistic UI update solo cuando cambia a finalizado o a no_iniciado
         if (targetStatus === 'finalizado') {
+            buttonEl.setAttribute('data-completed', 'true');
+            buttonEl.setAttribute('title', 'Completado (clic para desmarcar)');
             setMatrixButtonVisual(buttonEl, true, weekBg, weekPending);
             updateRowCounter(rowId, true);
             updateGlobalMatrixCounter(true);
         } else if (targetStatus === 'no_iniciado') {
+            buttonEl.setAttribute('data-completed', 'false');
+            buttonEl.setAttribute('title', 'Pendiente (clic para completar)');
             setMatrixButtonVisual(buttonEl, false, weekBg, weekPending);
             updateRowCounter(rowId, false);
             updateGlobalMatrixCounter(false);
@@ -3797,13 +3801,11 @@
                 buttonEl.disabled = true;
                 buttonEl.classList.add('cursor-not-allowed', 'opacity-75', 'border-dashed', 'border-purple-400', 'dark:border-purple-500', 'bg-purple-50/40', 'dark:bg-purple-950/20', 'text-purple-500');
                 buttonEl.classList.remove('cursor-pointer');
-                let icon = buttonEl.querySelector('i');
-                if (!icon) {
-                    icon = document.createElement('i');
-                    buttonEl.appendChild(icon);
-                }
+                buttonEl.querySelectorAll('i, svg').forEach(el => el.remove());
+                const icon = document.createElement('i');
                 icon.setAttribute('data-lucide', 'clock');
                 icon.className = 'w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2] block';
+                buttonEl.appendChild(icon);
                 if (window.lucide) lucide.createIcons({ root: buttonEl });
                 showMatrixToast('Tarea enviada a revisión. Pendiente de aprobación del administrador.', 'info');
             } else {
@@ -3814,10 +3816,14 @@
         } catch (err) {
             // Revert optimistic UI
             if (targetStatus === 'finalizado') {
+                buttonEl.setAttribute('data-completed', 'false');
+                buttonEl.setAttribute('title', 'Pendiente (clic para completar)');
                 setMatrixButtonVisual(buttonEl, false, weekBg, weekPending);
                 updateRowCounter(rowId, false);
                 updateGlobalMatrixCounter(false);
             } else if (targetStatus === 'no_iniciado') {
+                buttonEl.setAttribute('data-completed', 'true');
+                buttonEl.setAttribute('title', 'Completado (clic para desmarcar)');
                 setMatrixButtonVisual(buttonEl, true, weekBg, weekPending);
                 updateRowCounter(rowId, true);
                 updateGlobalMatrixCounter(true);
@@ -3825,6 +3831,10 @@
             showMatrixToast(err.message || 'Error al guardar el cumplimiento.', 'error');
         } finally {
             matrixInFlight[taskId] = false;
+            if (buttonEl.getAttribute('data-status') !== 'en_revision' && buttonEl.getAttribute('data-is-future') !== 'true') {
+                buttonEl.disabled = false;
+                buttonEl.classList.remove('pointer-events-none');
+            }
         }
     }
 
@@ -3961,11 +3971,13 @@
     }
 
     function setMatrixButtonVisual(buttonEl, isCompleted, weekBg, weekPending) {
-        let icon = buttonEl.querySelector('i');
-        if (!icon) {
-            icon = document.createElement('i');
-            buttonEl.appendChild(icon);
-        }
+        // Eliminar cualquier icono previo (sean <i> o <svg> generados por Lucide)
+        buttonEl.querySelectorAll('i, svg').forEach(el => el.remove());
+
+        const icon = document.createElement('i');
+        icon.setAttribute('data-lucide', 'check');
+        buttonEl.appendChild(icon);
+
         const weekBgClasses = weekBg.split(' ').filter(Boolean);
         const weekPendingClasses = weekPending.split(' ').filter(Boolean);
 
@@ -3977,18 +3989,15 @@
             buttonEl.classList.remove('text-transparent', 'border-2');
             weekBgClasses.forEach(c => buttonEl.classList.add(c));
             buttonEl.classList.add('border');
-            icon.setAttribute('data-lucide', 'check');
             icon.className = 'w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3] block';
-            if (window.lucide) lucide.createIcons({ root: buttonEl });
         } else {
             weekBgClasses.forEach(c => buttonEl.classList.remove(c));
             buttonEl.classList.remove('border');
             weekPendingClasses.forEach(c => buttonEl.classList.add(c));
             buttonEl.classList.add('text-transparent', 'border-2');
-            icon.setAttribute('data-lucide', 'check');
             icon.className = 'w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[3] hidden';
-            if (window.lucide) lucide.createIcons({ root: buttonEl });
         }
+        if (window.lucide) lucide.createIcons({ root: buttonEl });
     }
 
     function updateRowCounter(rowId, isNowCompleted) {
@@ -5519,11 +5528,9 @@
         if (f1 && f1.value !== currentFilteredUserId) f1.value = currentFilteredUserId;
         if (f2 && f2.value !== currentFilteredUserId) f2.value = currentFilteredUserId;
 
-        // 1. Actualizar eventos de FullCalendar sin duplicar ni crear instancias adicionales
+        // 1. Refrescar eventos de FullCalendar mediante refetch limpio de su fuente de eventos
         if (window.calendarInstance) {
-            window.calendarInstance.removeAllEvents();
-            const newEvents = getFilteredEvents(currentFilteredUserId);
-            window.calendarInstance.addEventSource(newEvents);
+            window.calendarInstance.refetchEvents();
         }
 
         // 2. Aplicar filtros combinados a la lista de tareas del proyecto
@@ -5544,7 +5551,9 @@
                 selectable: true,
                 dayMaxEvents: false,
                 displayEventTime: false,
-                events: getFilteredEvents(currentFilteredUserId),
+                events: function(fetchInfo, successCallback, failureCallback) {
+                    successCallback(getFilteredEvents(currentFilteredUserId));
+                },
 
                 eventContent: function(arg) {
                     const props = arg.event.extendedProps || {};
