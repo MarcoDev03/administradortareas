@@ -34,6 +34,8 @@ class TaskController extends Controller
             'create_per_user' => ['nullable', 'boolean'],
         ]);
 
+        $this->validateTaskDates($request);
+
         DB::transaction(function () use ($request) {
             $user = Auth::user();
             $assignedUsers = $request->input('assigned_user_ids', []);
@@ -144,6 +146,8 @@ class TaskController extends Controller
             'subtasks.*.status' => ['nullable', 'string', 'in:no_iniciado,finalizado'],
             'subtasks.*.id' => ['nullable', 'integer'],
         ]);
+
+        $this->validateTaskDates($request, $task);
 
         $user = Auth::user();
         if ($task->needs_review && !$user->hasFullAccess()) {
@@ -318,6 +322,31 @@ class TaskController extends Controller
         });
 
         return back()->with('success', 'Tarea eliminada definitivamente.');
+    }
+
+    protected function validateTaskDates(Request $request, ?Task $task = null): void
+    {
+        $startDate = $request->has('start_date')
+            ? $request->input('start_date')
+            : ($task ? ($task->start_date ? $task->start_date->format('Y-m-d') : null) : null);
+
+        $endDate = $request->has('end_date')
+            ? $request->input('end_date')
+            : ($task ? ($task->end_date ? $task->end_date->format('Y-m-d') : null) : null);
+
+        if ($startDate && $endDate) {
+            $startTime = $request->input('start_time') ?: '00:00';
+            $endTime = $request->input('end_time') ?: '23:59';
+
+            $startDt = \Carbon\Carbon::parse("{$startDate} {$startTime}");
+            $endDt = \Carbon\Carbon::parse("{$endDate} {$endTime}");
+
+            if ($endDt->lt($startDt)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'end_date' => 'La fecha y hora de finalización no pueden ser anteriores a la fecha y hora de inicio.',
+                ]);
+            }
+        }
     }
 }
 

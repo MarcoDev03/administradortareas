@@ -116,15 +116,25 @@ class DashboardController extends Controller
         }
         $recurringTasks = $recurringTasksQuery->orderBy('created_at', 'desc')->get();
 
-        // Incidencias del proyecto activo o visibles
-        $incidentsQuery = Incident::with(['project', 'reporter']);
+        // Incidencias del proyecto activo o visibles (incluyendo incidencias generales sin proyecto)
+        $incidentsQuery = Incident::with(['project', 'reporter', 'assignedUser']);
         if ($activeProject) {
-            $incidentsQuery->where('project_id', $activeProject->id);
+            $incidentsQuery->where(function ($q) use ($activeProject) {
+                $q->where('project_id', $activeProject->id)
+                  ->orWhereNull('project_id');
+            });
         } else {
-            $incidentsQuery->whereIn('project_id', $visibleProjects->pluck('id'));
+            $visibleProjectIds = $visibleProjects->pluck('id');
+            $incidentsQuery->where(function ($q) use ($visibleProjectIds) {
+                $q->whereIn('project_id', $visibleProjectIds)
+                  ->orWhereNull('project_id');
+            });
         }
         if ($selectedUserId) {
-            $incidentsQuery->where('user_id', (int)$selectedUserId);
+            $incidentsQuery->where(function ($q) use ($selectedUserId) {
+                $q->where('user_id', (int)$selectedUserId)
+                  ->orWhere('assigned_user_id', (int)$selectedUserId);
+            });
         }
         $incidents = $incidentsQuery->orderBy('created_at', 'desc')->get();
 
@@ -288,10 +298,11 @@ class DashboardController extends Controller
         $resumenStatus = (string)$request->query('task_status', 'all');
 
         // Tareas de hoy: programadas para hoy, completadas hoy, o pendientes vencidas
-        $todayTasks = $tasks->filter(function ($task) use ($today) {
+        $todayDateStr = $today->toDateString();
+        $todayTasks = $tasks->filter(function ($task) use ($todayDateStr) {
             // 1. Tareas finalizadas hoy
             if ($task->status === 'finalizado') {
-                return $task->completed_at && Carbon::parse($task->completed_at)->isToday();
+                return $task->completed_at && $task->completed_at->copy()->timezone('America/La_Paz')->toDateString() === $todayDateStr;
             }
 
             // 2. Tareas vencidas (pendientes con fecha de inicio o fin previa a hoy)
@@ -300,15 +311,14 @@ class DashboardController extends Controller
             }
 
             // 3. Tareas programadas para hoy (start_date o end_date es hoy)
-            $startDateToday = $task->start_date && Carbon::parse($task->start_date)->isToday();
-            $endDateToday = $task->end_date && Carbon::parse($task->end_date)->isToday();
-
-            if ($startDateToday || $endDateToday) {
+            $sStr = $task->start_date ? substr((string)$task->start_date, 0, 10) : null;
+            $eStr = $task->end_date ? substr((string)$task->end_date, 0, 10) : null;
+            if ($sStr === $todayDateStr || $eStr === $todayDateStr) {
                 return true;
             }
 
             // 4. Tareas sin fecha explícita creadas hoy
-            if (!$task->start_date && !$task->end_date && $task->created_at && $task->created_at->isToday()) {
+            if (!$task->start_date && !$task->end_date && $task->created_at && $task->created_at->copy()->timezone('America/La_Paz')->toDateString() === $todayDateStr) {
                 return true;
             }
 

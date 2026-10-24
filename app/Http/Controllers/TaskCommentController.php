@@ -25,6 +25,7 @@ class TaskCommentController extends Controller
                     'created_at' => $c->created_at ? $c->created_at->diffForHumans() : '',
                     'created_at_formatted' => $c->created_at ? $c->created_at->copy()->timezone('America/La_Paz')->format('d/m/Y H:i') : '',
                     'can_delete' => Auth::id() === $c->user_id || Auth::user()->hasFullAccess(),
+                    'can_edit' => Auth::id() === $c->user_id || Auth::user()->isAdmin(),
                 ];
             });
 
@@ -100,5 +101,38 @@ class TaskCommentController extends Controller
         }
 
         return back()->with('success', 'Comentario eliminado.');
+    }
+
+    public function update(Request $request, TaskComment $comment)
+    {
+        $user = Auth::user();
+
+        if ($comment->user_id !== $user->id && !$user->isAdmin()) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['error' => 'No tienes permiso para editar este comentario.'], 403);
+            }
+            return back()->with('error', 'No tienes permiso para editar este comentario.');
+        }
+
+        $request->validate([
+            'comment' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $comment->update([
+            'comment' => trim($request->comment),
+        ]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'comment' => [
+                    'id' => $comment->id,
+                    'comment' => $comment->comment,
+                    'updated_at' => $comment->updated_at ? $comment->updated_at->diffForHumans() : '',
+                ],
+            ]);
+        }
+
+        return back()->with('success', 'Comentario actualizado exitosamente.');
     }
 }

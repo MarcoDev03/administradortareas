@@ -4,13 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+    protected function checkAdminAuthorization(): void
+    {
+        if (!Auth::check() || !Auth::user()->isAdmin()) {
+            abort(403, 'Acceso denegado: solo el Administrador puede gestionar usuarios.');
+        }
+    }
+
     public function store(Request $request)
     {
+        $this->checkAdminAuthorization();
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
@@ -22,7 +32,6 @@ class UserController extends Controller
             'name' => trim($request->name),
             'email' => strtolower(trim($request->email)),
             'password' => Hash::make($request->password),
-            'clave' => $request->password,
             'role' => $request->role,
         ]);
 
@@ -31,6 +40,8 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $this->checkAdminAuthorization();
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
@@ -46,7 +57,6 @@ class UserController extends Controller
 
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
-            $data['clave'] = $request->password;
         }
 
         $user->update($data);
@@ -56,6 +66,12 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $this->checkAdminAuthorization();
+
+        if (Auth::id() === $user->id) {
+            return back()->with('error', 'No puedes eliminar tu propia cuenta de usuario.');
+        }
+
         if (User::count() <= 1) {
             return back()->with('error', 'No se puede eliminar el único usuario del sistema.');
         }

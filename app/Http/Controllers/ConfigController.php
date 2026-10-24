@@ -4,16 +4,26 @@ namespace App\Http\Controllers;
 
 use App\Models\ConfigEstilosEstadosPrioridadPeriodicidad;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class ConfigController extends Controller
 {
+    protected function checkAdminAuthorization(): void
+    {
+        if (!Auth::check() || !Auth::user()->isAdmin()) {
+            abort(403, 'Acceso denegado: solo el Administrador puede acceder a la configuración.');
+        }
+    }
+
     /**
      * Muestra la vista de configuración cargando los estados desde la base de datos.
      */
     public function index()
     {
+        $this->checkAdminAuthorization();
+
         $estados = ConfigEstilosEstadosPrioridadPeriodicidad::where(function ($q) {
             $q->where('tipo', 'estado')->orWhereNull('tipo');
         })->orderBy('id')->get();
@@ -79,6 +89,8 @@ class ConfigController extends Controller
      */
     protected function saveConfigItems(Request $request, string $fieldKey, string $folder, string $prefix, string $successMessage, string $tabName)
     {
+        $this->checkAdminAuthorization();
+
         $request->validate([
             $fieldKey => ['required', 'array'],
             "{$fieldKey}.*.id" => ['required', 'exists:config_estilos_estados_prioridad_periodicidad,id'],
@@ -161,6 +173,8 @@ class ConfigController extends Controller
      */
     public function destroyIcon($id)
     {
+        $this->checkAdminAuthorization();
+
         $model = ConfigEstilosEstadosPrioridadPeriodicidad::findOrFail($id);
         if ($model->ruta_icono) {
             $isShared = ConfigEstilosEstadosPrioridadPeriodicidad::where('id', '!=', $model->id)

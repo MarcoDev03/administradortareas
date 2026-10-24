@@ -39,7 +39,7 @@
     <!-- Área de Contenido Principal (1 Contenedor) -->
     <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 flex items-start justify-center">
               <!-- Contenedor Principal de Configuración -->
-        <div class="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-soft p-5 sm:p-8 space-y-6">
+        <div class="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-soft p-3.5 sm:p-8 space-y-5 sm:space-y-6">
             
             <!-- Mensaje de éxito al guardar -->
             @if (session('success'))
@@ -51,26 +51,26 @@
 
             <!-- Selector de Tabs Centrado en la parte superior del cuadro -->
             <div class="flex items-center justify-center pb-2 border-b border-slate-100 dark:border-slate-800/80">
-                <nav class="inline-flex p-1 bg-slate-100 dark:bg-slate-800/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 gap-1" aria-label="Tabs de Configuración">
+                <nav class="inline-flex p-1 bg-slate-100 dark:bg-slate-800/90 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 gap-1 flex-wrap justify-center" aria-label="Tabs de Configuración">
                     <button type="button" 
                             onclick="switchTab('estados')" 
                             id="tab-btn-estados"
-                            class="tab-btn px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 flex items-center gap-2 bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs border border-slate-200/70 dark:border-slate-700 cursor-pointer">
-                        <i data-lucide="list-todo" class="w-4 h-4"></i>
+                            class="tab-btn px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-sm font-bold transition-all duration-200 flex items-center gap-1.5 sm:gap-2 bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs border border-slate-200/70 dark:border-slate-700 cursor-pointer">
+                        <i data-lucide="list-todo" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                         <span>Estados</span>
                     </button>
                     <button type="button" 
                             onclick="switchTab('prioridad')" 
                             id="tab-btn-prioridad"
-                            class="tab-btn px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white cursor-pointer">
-                        <i data-lucide="flag" class="w-4 h-4"></i>
+                            class="tab-btn px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-sm font-medium transition-all duration-200 flex items-center gap-1.5 sm:gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white cursor-pointer">
+                        <i data-lucide="flag" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                         <span>Prioridad</span>
                     </button>
                     <button type="button" 
                             onclick="switchTab('periodicidad')" 
                             id="tab-btn-periodicidad"
-                            class="tab-btn px-4 sm:px-5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white cursor-pointer">
-                        <i data-lucide="repeat" class="w-4 h-4"></i>
+                            class="tab-btn px-3 sm:px-5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-sm font-medium transition-all duration-200 flex items-center gap-1.5 sm:gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white cursor-pointer">
+                        <i data-lucide="repeat" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                         <span>Tareas Periódicas</span>
                     </button>
                 </nav>
@@ -118,7 +118,7 @@
                                 <input type="hidden" name="estados[{{ $estado->id }}][id]" value="{{ $estado->id }}">
 
                                 <!-- Izquierda: Indicador Color, Icono, Nombre del Estado & Vista Previa -->
-                                <div class="flex items-center space-x-3 flex-1 min-w-[220px]">
+                                <div class="flex items-center space-x-2.5 sm:space-x-3 flex-1 min-w-0 w-full sm:w-auto">
                                     <!-- Indicador Circular del Color -->
                                     <span id="preview-indicator-{{ $estado->id }}" 
                                           class="w-4 h-4 rounded-full shrink-0 shadow-xs border border-black/10 dark:border-white/10 transition-colors duration-200" 
@@ -164,7 +164,7 @@
                                 </div>
 
                                 <!-- Derecha: Selector de Archivo de Icono + Controles de Color -->
-                                <div class="flex items-center space-x-2.5 sm:justify-end shrink-0 flex-wrap gap-y-2">
+                                <div class="flex items-center gap-2 sm:gap-2.5 sm:justify-end shrink-0 flex-wrap w-full sm:w-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-700/60">
                                     
                                     <!-- Botón e Input para Cargar Icono -->
                                     <div class="relative">
@@ -219,7 +219,7 @@
                                     </div>
 
                                     <!-- Input Código Hexadecimal -->
-                                    <div class="relative w-full sm:w-32">
+                                    <div class="relative w-28 sm:w-32">
                                         <input type="text" 
                                                id="hex-{{ $estado->id }}" 
                                                name="estados[{{ $estado->id }}][color]"
@@ -282,7 +282,7 @@
                                 <input type="hidden" name="prioridades[{{ $prio->id }}][id]" value="{{ $prio->id }}">
 
                                 <!-- Izquierda: Indicador Color, Icono, Nombre de la Prioridad & Vista Previa -->
-                                <div class="flex items-center space-x-3 flex-1 min-w-[220px]">
+                                <div class="flex items-center space-x-2.5 sm:space-x-3 flex-1 min-w-0 w-full sm:w-auto">
                                     <!-- Indicador Circular del Color -->
                                     <span id="preview-indicator-{{ $prio->id }}" 
                                           class="w-4 h-4 rounded-full shrink-0 shadow-xs border border-black/10 dark:border-white/10 transition-colors duration-200" 
@@ -328,7 +328,7 @@
                                 </div>
 
                                 <!-- Derecha: Selector de Archivo de Icono + Controles de Color -->
-                                <div class="flex items-center space-x-2.5 sm:justify-end shrink-0 flex-wrap gap-y-2">
+                                <div class="flex items-center gap-2 sm:gap-2.5 sm:justify-end shrink-0 flex-wrap w-full sm:w-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-700/60">
                                     
                                     <!-- Botón e Input para Cargar Icono -->
                                     <div class="relative">
@@ -383,7 +383,7 @@
                                     </div>
 
                                     <!-- Input Código Hexadecimal -->
-                                    <div class="relative w-full sm:w-32">
+                                    <div class="relative w-28 sm:w-32">
                                         <input type="text" 
                                                id="hex-{{ $prio->id }}" 
                                                name="prioridades[{{ $prio->id }}][color]"
@@ -446,7 +446,7 @@
                                 <input type="hidden" name="periodicidades[{{ $peri->id }}][id]" value="{{ $peri->id }}">
 
                                 <!-- Izquierda: Indicador Color, Icono, Nombre de la Periodicidad & Vista Previa -->
-                                <div class="flex items-center space-x-3 flex-1 min-w-[220px]">
+                                <div class="flex items-center space-x-3 flex-1 min-w-0 w-full sm:w-auto">
                                     <!-- Indicador Circular del Color -->
                                     <span id="preview-indicator-{{ $peri->id }}" 
                                           class="w-4 h-4 rounded-full shrink-0 shadow-xs border border-black/10 dark:border-white/10 transition-colors duration-200" 
@@ -492,7 +492,7 @@
                                 </div>
 
                                 <!-- Derecha: Selector de Archivo de Icono + Controles de Color -->
-                                <div class="flex items-center space-x-2.5 sm:justify-end shrink-0 flex-wrap gap-y-2">
+                                <div class="flex items-center gap-2 sm:gap-2.5 sm:justify-end shrink-0 flex-wrap w-full sm:w-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60 dark:border-slate-700/60">
                                     
                                     <!-- Botón e Input para Cargar Icono -->
                                     <div class="relative">
@@ -547,7 +547,7 @@
                                     </div>
 
                                     <!-- Input Código Hexadecimal -->
-                                    <div class="relative w-full sm:w-32">
+                                    <div class="relative w-28 sm:w-32">
                                         <input type="text" 
                                                id="hex-{{ $peri->id }}" 
                                                name="periodicidades[{{ $peri->id }}][color]"

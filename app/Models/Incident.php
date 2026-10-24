@@ -13,6 +13,7 @@ class Incident extends Model
     protected $fillable = [
         'project_id',
         'user_id',
+        'assigned_user_id',
         'titulo',
         'descripcion',
         'prioridad',
@@ -27,5 +28,15 @@ class Incident extends Model
     public function reporter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function assignedUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_user_id');
+    }
+
+    public function attachments(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 }

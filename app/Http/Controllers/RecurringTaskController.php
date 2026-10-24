@@ -30,6 +30,8 @@ class RecurringTaskController extends Controller
             'subtasks.*.title' => ['required', 'string', 'max:255'],
         ]);
 
+        $this->validateRecurringTaskDates($request);
+
         DB::transaction(function () use ($request) {
             $user = Auth::user();
 
@@ -87,6 +89,8 @@ class RecurringTaskController extends Controller
             'subtasks.*.title' => ['required', 'string', 'max:255'],
         ]);
 
+        $this->validateRecurringTaskDates($request);
+
         DB::transaction(function () use ($request, $recurringTask) {
             $recurringTask->update([
                 'module_id' => $request->module_id ?: null,
@@ -138,5 +142,27 @@ class RecurringTaskController extends Controller
     {
         $recurringTask->delete();
         return back()->with('success', 'Regla de tarea periódica eliminada.');
+    }
+
+    protected function validateRecurringTaskDates(Request $request): void
+    {
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        if ($startDate && $endDate) {
+            if ($endDate < $startDate) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'end_date' => 'La fecha de finalización no puede ser anterior a la fecha de inicio.',
+                ]);
+            }
+        }
+
+        if ($request->filled('start_time') && $request->filled('end_time')) {
+            if ($request->end_time < $request->start_time) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'end_time' => 'La hora de finalización no puede ser anterior a la hora de inicio.',
+                ]);
+            }
+        }
     }
 }

@@ -5,27 +5,7 @@
 @section('content')
 @php
     $todayBolivia = \Carbon\Carbon::today('America/La_Paz')->toDateString();
-    $todayBoliviaTasks = ($tasks ?? collect())->filter(function ($task) use ($todayBolivia) {
-        if ($task->status === 'finalizado') {
-            return $task->completed_at && $task->completed_at->copy()->timezone('America/La_Paz')->toDateString() === $todayBolivia;
-        }
-        if ($task->isOverdue()) {
-            return true;
-        }
-        $sStr = $task->start_date ? substr((string)$task->start_date, 0, 10) : null;
-        $eStr = $task->end_date ? substr((string)$task->end_date, 0, 10) : null;
-        if ($sStr === $todayBolivia || $eStr === $todayBolivia) {
-            return true;
-        }
-        if (!$task->start_date && !$task->end_date && $task->created_at && $task->created_at->copy()->timezone('America/La_Paz')->toDateString() === $todayBolivia) {
-            return true;
-        }
-        return false;
-    })->values();
-    $todayTasks = $todayBoliviaTasks;
-    if (isset($taskFilter) && $taskFilter === 'hoy') {
-        $filteredTasks = $todayBoliviaTasks;
-    }
+    $todayTasks = $todayTasks ?? collect();
     $overdueTasks = $overdueTasks ?? ($tasks ? $tasks->filter(fn($t) => $t->isOverdue()) : collect());
     $overdueCount = $overdueCount ?? $overdueTasks->count();
     $estadoColores = $estadoColores ?? [
@@ -251,6 +231,7 @@
             <span>Instalar Aplicación PWA</span>
         </button> -->
 
+        @if($user->isAdmin())
         <a href="{{ route('config.index') }}" onclick="saveSettingsReturnView()" class="w-full py-1.5 px-3 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-indigo-300 transition text-xs flex items-center justify-between">
             <div class="flex items-center space-x-2">
                 <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
@@ -259,14 +240,13 @@
             <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
         </a>
 
-        @if($user->hasFullAccess())
-            <button onclick="openUsersListModal()" class="w-full py-1.5 px-3 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-indigo-300 transition text-xs flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
-                    <span>Gestión de Usuarios</span>
-                </div>
-                <span class="text-[10px] px-1.5 py-0.5 rounded-full tab-counter-badge font-bold">{{ $allUsers->count() }}</span>
-            </button>
+        <button onclick="openUsersListModal()" class="w-full py-1.5 px-3 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-indigo-300 transition text-xs flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+                <span>Gestión de Usuarios</span>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded-full tab-counter-badge font-bold">{{ $allUsers->count() }}</span>
+        </button>
         @endif
     </div>
 </aside>
@@ -1568,7 +1548,7 @@
 
                                     <optgroup label="Vencimiento" class="font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800">
                                         <option value="due:vencidas" {{ $taskFilterOption === 'due:vencidas' ? 'selected' : '' }} class="font-normal bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">Vencidas</option>
-                                        <option value="due:no_vencidas" {{ $taskFilterOption === 'due:no_vencidas' ? 'selected' : '' }} class="font-normal bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">No vencidas</option>
+                                       <!-- <option value="due:no_vencidas" {{ $taskFilterOption === 'due:no_vencidas' ? 'selected' : '' }} class="font-normal bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">No vencidas</option>-->
                                     </optgroup>
                                 </select>
                                 <i data-lucide="chevron-down" class="w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
@@ -1813,7 +1793,7 @@
                                                                 <button onclick='openTaskModal(@json($t->load(["assignedUsers", "subtasks"])))' class="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Editar tarea">
                                                                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                                                 </button>
-                                                                <form method="POST" action="{{ route('tasks.destroy', $t->id) }}" class="inline">
+                                                                <form method="POST" action="{{ route('tasks.destroy', $t->id) }}" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta tarea?');" class="inline">
                                                                     @csrf @method('DELETE')
                                                                     <button type="submit" class="p-1 text-slate-400 hover:text-red-600 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Eliminar tarea">
                                                                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -1906,7 +1886,7 @@
                                 <div class="flex items-center space-x-2">
                                     <i data-lucide="{{ $col['icon'] }}" class="w-4 h-4 {{ $col['badgeText'] }}"></i>
                                     <h3 class="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-200">{{ $col['title'] }}</h3>
-                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $col['badgeBg'] }} {{ $col['badgeText'] }}">
+                                    <span id="kanban-counter-{{ $col['id'] }}" class="text-[10px] font-bold px-2 py-0.5 rounded-full {{ $col['badgeBg'] }} {{ $col['badgeText'] }}">
                                         {{ $colTasks->count() }}
                                     </span>
                                 </div>
@@ -1919,14 +1899,14 @@
                             </div>
 
                             <!-- Cards Scrollable Area -->
-                            <div class="p-2 sm:p-2.5 space-y-2.5 overflow-y-auto flex-1 no-scrollbar">
+                            <div id="kanban-cards-{{ $col['id'] }}" class="kanban-cards-container p-2 sm:p-2.5 space-y-2.5 overflow-y-auto flex-1 no-scrollbar">
                                 @if($colTasks->isEmpty())
-                                    <div class="text-center py-8 text-slate-400 dark:text-slate-500 text-xs italic">
+                                    <div id="kanban-empty-{{ $col['id'] }}" class="kanban-empty-msg text-center py-8 text-slate-400 dark:text-slate-500 text-xs italic {{ $colTasks->isEmpty() ? '' : 'hidden' }}">
                                         Sin tareas
                                     </div>
                                 @else
                                     @foreach($colTasks as $t)
-                                        <div draggable="true" ondragstart="handleDragStart(event, '{{ $t->id }}')"
+                                        <div id="kanban-card-{{ $t->id }}" data-task-id="{{ $t->id }}" draggable="true" ondragstart="handleDragStart(event, '{{ $t->id }}')"
                                             class="bg-white dark:bg-slate-800/90 rounded-xl border border-slate-200/90 dark:border-slate-700/80 p-3 sm:p-3.5 space-y-2.5 shadow-soft hover:shadow-card dark:hover:shadow-card-dark transition cursor-grab active:cursor-grabbing group">
                                             
                                             <div class="flex items-start justify-between gap-1.5">
@@ -1947,7 +1927,7 @@
                                                         <button onclick='openTaskModal(@json($t->load(["assignedUsers", "subtasks"])))' class="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Editar tarea">
                                                             <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                                         </button>
-                                                        <form method="POST" action="{{ route('tasks.destroy', $t->id) }}" class="inline">
+                                                        <form method="POST" action="{{ route('tasks.destroy', $t->id) }}" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta tarea?');" class="inline">
                                                             @csrf @method('DELETE')
                                                             <button type="submit" class="p-1 text-slate-400 hover:text-red-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Eliminar tarea">
                                                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -2132,27 +2112,50 @@
                                         <p class="text-center py-6 text-slate-400 dark:text-slate-500 text-xs italic">Sin incidencias en esta columna</p>
                                     @else
                                         @foreach($incItems as $inc)
-                                            <div class="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-2">
+                                            <div id="inc-card-{{ $inc->id }}" class="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-2.5 group shadow-2xs hover:shadow-xs transition">
                                                 <div class="flex items-start justify-between gap-2">
-                                                    <h5 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white break-words flex-1 min-w-0">{{ $inc->titulo }}</h5>
-                                                    <span class="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase shrink-0
-                                                        {{ $inc->prioridad === 'urgente' ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' }}">
-                                                        {{ $inc->prioridad }}
-                                                    </span>
+                                                    <div class="flex-1 min-w-0">
+                                                        <h5 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white break-words leading-tight">{{ $inc->titulo }}</h5>
+                                                        <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                                                            <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded {{ $inc->project ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60' : 'bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300' }}">
+                                                                {{ $inc->project ? $inc->project->name : 'General (Sin proyecto)' }}
+                                                            </span>
+                                                            @if($inc->assignedUser)
+                                                                <span class="text-[9px] font-medium px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/60 inline-flex items-center gap-1">
+                                                                    <i data-lucide="user" class="w-2.5 h-2.5"></i>
+                                                                    <span>{{ $inc->assignedUser->name }}</span>
+                                                                </span>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex items-center gap-1 shrink-0">
+                                                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase
+                                                            {{ $inc->prioridad === 'urgente' ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' }}">
+                                                            {{ $inc->prioridad }}
+                                                        </span>
+                                                        @if(!$user->isHelper() || Auth::id() === $inc->reported_by)
+                                                            <button type="button" onclick='openIncidentModal(@json($inc))' class="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition" title="Editar incidencia">
+                                                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                                            </button>
+                                                            <button type="button" onclick="deleteIncident({{ $inc->id }})" class="p-1 text-slate-400 hover:text-red-600 rounded transition" title="Eliminar incidencia">
+                                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                            </button>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                                 @if($inc->descripcion)
-                                                    <p class="text-xs text-slate-500 dark:text-slate-400 break-words">{{ $inc->descripcion }}</p>
+                                                    <p class="text-xs text-slate-500 dark:text-slate-400 break-words line-clamp-3">{{ $inc->descripcion }}</p>
                                                 @endif
                                                 <div class="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between flex-wrap gap-2 text-[10px] text-slate-400">
                                                     <span class="truncate max-w-[180px]">Reportado: <strong>{{ $inc->reporter ? $inc->reporter->name : 'Anónimo' }}</strong></span>
-                                                    <form method="POST" action="{{ route('incidents.updateStatus', $inc->id) }}">
-                                                        @csrf @method('PATCH')
-                                                        <select name="estado" onchange="this.form.submit()" class="text-[10px] bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-0.5 text-slate-700 dark:text-slate-200">
+                                                    <div class="flex items-center gap-1.5">
+                                                        <label class="text-[10px] text-slate-400">Estado:</label>
+                                                        <select name="estado" onchange="changeIncidentStatus({{ $inc->id }}, this.value, this)" class="text-[10px] font-semibold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-0.5 text-slate-700 dark:text-slate-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500">
                                                             <option value="abierta" {{ $inc->estado === 'abierta' ? 'selected' : '' }}>Abierta</option>
                                                             <option value="en_proceso" {{ $inc->estado === 'en_proceso' ? 'selected' : '' }}>En Proceso</option>
                                                             <option value="resuelta" {{ $inc->estado === 'resuelta' ? 'selected' : '' }}>Resuelta</option>
                                                         </select>
-                                                    </form>
+                                                    </div>
                                                 </div>
                                             </div>
                                         @endforeach
@@ -2566,12 +2569,12 @@
                     </div>-->
 
                     <!-- Tabla / Matriz con Columnas Semanales y Checks por Día -->
-                    <div class="relative overflow-x-auto overflow-y-auto max-h-[520px] sm:max-h-[620px] lg:max-h-[calc(100vh-290px)] min-h-[280px] rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-soft">
+                    <div class="relative overflow-x-auto overflow-y-auto max-h-[520px] sm:max-h-[620px] lg:max-h-[calc(100vh-290px)] min-h-[280px] rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-soft" style="touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch;">
                         <table class="w-full border-collapse text-left select-none">
                             <thead class="sticky top-0 z-30 bg-white dark:bg-slate-900 shadow-xs">
                                 <!-- Fila 1: Títulos de Semana (Semana 1, Semana 2...) -->
                                 <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs">
-                                    <th class="sticky left-0 z-40 bg-slate-50 dark:bg-slate-900 p-3 min-w-[240px] sm:min-w-[280px] max-w-[300px] border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] font-bold text-slate-700 dark:text-slate-200">
+                                    <th class="sticky left-0 z-40 bg-slate-50 dark:bg-slate-900 p-2.5 sm:p-3 min-w-[160px] sm:min-w-[260px] max-w-[190px] sm:max-w-[320px] border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] font-bold text-slate-700 dark:text-slate-200">
                                         Lista de Tareas
                                     </th>
                                     @foreach($matrixData['weeks'] as $wIdx => $week)
@@ -2584,7 +2587,7 @@
 
                                 <!-- Fila 2: Abreviatura del Día y Número de Fecha -->
                                 <tr class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-[11px]">
-                                    <th class="sticky left-0 z-40 bg-white dark:bg-slate-900 p-2 min-w-[240px] sm:min-w-[280px] max-w-[300px] border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                                    <th class="sticky left-0 z-40 bg-white dark:bg-slate-900 p-2 min-w-[160px] sm:min-w-[260px] max-w-[190px] sm:max-w-[320px] border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] text-[10px] text-slate-400 dark:text-slate-500 font-medium">
                                         Frecuencia y Nombre
                                     </th>
                                     @foreach($matrixData['days'] as $d => $dayInfo)
@@ -2593,7 +2596,7 @@
                                             $isMatrixDayToday = ($dayInfo['date'] === $todayBolivia);
                                             $isMatrixDayFuture = ($dayInfo['date'] > $todayBolivia);
                                         @endphp
-                                        <th class="p-1 min-w-[38px] sm:min-w-[42px] text-center border-r border-slate-100 dark:border-slate-800/80 transition-colors
+                                        <th class="p-1 sm:p-1.5 min-w-[42px] sm:min-w-[46px] text-center border-r border-slate-100 dark:border-slate-800/80 transition-colors
                                             @if($isMatrixDayToday)
                                                 {{ $wTheme['todayHeaderBg'] }} {{ $wTheme['todayBorder'] }}
                                             @elseif($isMatrixDayFuture)
@@ -2637,14 +2640,14 @@
                                         data-task-title="{{ $row['title'] }}">
                                         
                                         <!-- Columna Fija Izquierda: Título y Datos de la Tarea -->
-                                        <td class="sticky left-0 z-20 bg-white dark:bg-slate-900 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-800/90 p-2.5 sm:p-3 min-w-[240px] sm:min-w-[280px] max-w-[300px] border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] transition-colors">
+                                        <td class="sticky left-0 z-20 bg-white dark:bg-slate-900 group-hover:bg-slate-50/90 dark:group-hover:bg-slate-800/90 p-2 sm:p-2.5 min-w-[160px] sm:min-w-[260px] max-w-[190px] sm:max-w-[320px] border-r border-slate-200 dark:border-slate-800 shadow-[2px_0_5px_rgba(0,0,0,0.03)] transition-colors">
                                             <div class="flex items-center space-x-2.5 min-w-0">
                                                 <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center shrink-0 shadow-2xs
                                                     {{ $row['type'] === 'periodica' ? 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300' }}">
                                                     <i data-lucide="{{ $row['type'] === 'periodica' ? 'repeat' : 'check-circle-2' }}" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                                                 </div>
                                                 <div class="min-w-0 flex-1">
-                                                    <span class="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate block" title="{{ $row['title'] }}">
+                                                    <span class="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 line-clamp-2 break-words leading-tight block" title="{{ $row['title'] }}">
                                                         {{ $row['title'] }}
                                                     </span>
                                                     <div class="flex items-center space-x-1.5 text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 flex-wrap">
@@ -2731,7 +2734,7 @@
                                                             data-row-id="{{ $row['id'] }}"
                                                             data-week-bg="{{ $wTheme['checkBg'] }}"
                                                             data-week-pending="{{ $wTheme['checkPending'] }}"
-                                                            class="matrix-check-btn w-6 h-6 sm:w-7 sm:h-7 rounded-md mx-auto flex items-center justify-center transition-all duration-150 transform select-none
+                                                            class="matrix-check-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg mx-auto flex items-center justify-center transition-all duration-150 transform select-none touch-manipulation
                                                             @if($cell['is_completed'])
                                                                 @if($isCellFuture)
                                                                     bg-slate-400 dark:bg-slate-600 text-white border border-slate-400 dark:border-slate-600 opacity-60
@@ -3138,8 +3141,10 @@
                         <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Fecha y Hora de Inicio</label>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <input type="date" id="task_start_date" name="start_date"
+                                oninput="syncTaskDateConstraints('start')" onchange="syncTaskDateConstraints('start')"
                                 class="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white outline-none">
                             <input type="time" id="task_start_time" name="start_time"
+                                oninput="syncTaskDateConstraints('time')" onchange="syncTaskDateConstraints('time')"
                                 class="w-full px-2.5 py-1.5 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white outline-none">
                         </div>
                     </div>
@@ -3162,8 +3167,10 @@
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <input type="date" id="task_end_date" name="end_date"
+                                oninput="syncTaskDateConstraints('end')" onchange="syncTaskDateConstraints('end')"
                                 class="w-full px-2 py-1.5 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg text-xs text-slate-900 dark:text-white outline-none">
                             <input type="time" id="task_end_time" name="end_time"
+                                oninput="syncTaskDateConstraints('time')" onchange="syncTaskDateConstraints('time')"
                                 class="w-full px-2 py-1.5 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg text-xs text-slate-900 dark:text-white outline-none">
                         </div>
                     </div>
@@ -3186,6 +3193,27 @@
                         </div>
                     </div>
                     @endif
+
+                    <!-- Archivos Adjuntos (Punto 17) -->
+                    <div id="taskAttachmentsSection" class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2 hidden">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="paperclip" class="w-3.5 h-3.5 text-indigo-500"></i>
+                                <span>Archivos Adjuntos</span>
+                            </label>
+                            <span id="taskAttachmentsCount" class="text-[10px] text-slate-400 font-mono"></span>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <input type="file" id="task_attachment_file" class="text-xs text-slate-600 dark:text-slate-300 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 dark:file:bg-indigo-950/80 file:text-indigo-600 dark:file:text-indigo-400 hover:file:bg-indigo-100 dark:hover:file:bg-indigo-900 cursor-pointer w-full">
+                            <button type="button" onclick="uploadTaskAttachment()" id="btnUploadTaskAttachment" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shrink-0 shadow-xs flex items-center gap-1">
+                                <i data-lucide="upload" class="w-3 h-3"></i>
+                                <span>Adjuntar</span>
+                            </button>
+                        </div>
+
+                        <div id="taskAttachmentsList" class="space-y-1.5 max-h-36 overflow-y-auto"></div>
+                    </div>
                 </div>
             </div>
 
@@ -3289,33 +3317,56 @@
 
 <!-- 4. Incident Modal -->
 <div id="incidentModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
-    <div class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800">
+    <div class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl max-w-lg w-full p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800">
         <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <i data-lucide="alert-triangle" class="w-4 h-4 text-red-500"></i>
-                <span>Reportar Incidencia</span>
+                <span id="incidentModalTitle">Reportar Incidencia</span>
             </h3>
             <button onclick="closeModal('incidentModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
         </div>
 
-        <form method="POST" action="{{ route('incidents.store') }}" class="space-y-4">
+        <form id="incidentForm" method="POST" action="{{ route('incidents.store') }}" enctype="multipart/form-data" class="space-y-4">
             @csrf
-            <input type="hidden" name="project_id" value="{{ $activeProject ? $activeProject->id : '' }}">
+            <input type="hidden" id="incident_method" name="_method" value="POST">
 
             <div>
                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Título de la Incidencia *</label>
-                <input type="text" name="titulo" required class="w-full px-3.5 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                <input type="text" id="incident_titulo" name="titulo" required class="w-full px-3.5 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
             </div>
 
             <div>
                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
-                <textarea name="descripcion" rows="3" class="w-full px-3.5 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"></textarea>
+                <textarea id="incident_descripcion" name="descripcion" rows="3" class="w-full px-3.5 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Proyecto Vinculado</label>
+                    <select id="incident_project_id" name="project_id" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="">General (Sin proyecto asignado)</option>
+                        @foreach(($visibleProjects ?? collect()) as $p)
+                            <option value="{{ $p->id }}" {{ ($activeProject && $activeProject->id == $p->id) ? 'selected' : '' }}>
+                                {{ $p->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Asignar a Usuario</label>
+                    <select id="incident_assigned_user_id" name="assigned_user_id" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="">Sin asignar</option>
+                        @foreach($allUsers as $u)
+                            <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->role }})</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Prioridad</label>
-                    <select name="prioridad" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <select id="incident_prioridad" name="prioridad" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         <option value="baja">Baja</option>
                         <option value="media" selected>Media</option>
                         <option value="alta">Alta</option>
@@ -3324,7 +3375,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Estado</label>
-                    <select name="estado" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <select id="incident_estado" name="estado" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         <option value="abierta" selected>Abierta</option>
                         <option value="en_proceso">En Proceso</option>
                         <option value="resuelta">Resuelta</option>
@@ -3332,15 +3383,64 @@
                 </div>
             </div>
 
+            <!-- Archivos Adjuntos para Incidencias -->
+            <div id="incidentAttachmentsSection" class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <i data-lucide="paperclip" class="w-3.5 h-3.5 text-red-500"></i>
+                        <span>Adjuntar Archivo</span>
+                    </label>
+                    <span id="incidentAttachmentsCount" class="text-[10px] text-slate-400 font-mono"></span>
+                </div>
+                
+                <div class="space-y-2">
+                    <div class="relative flex items-center">
+                        <input type="file" id="incident_attachment_file" name="attachment_file" onchange="handleIncidentFileSelected(this)"
+                            class="text-xs text-slate-600 dark:text-slate-300 file:mr-2.5 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-red-50 dark:file:bg-red-950/80 file:text-red-600 dark:file:text-red-400 hover:file:bg-red-100 dark:hover:file:bg-red-900 cursor-pointer w-full border border-slate-200 dark:border-slate-700 rounded-xl p-1 bg-white dark:bg-slate-800 focus:outline-none">
+                    </div>
+
+                    <!-- Previsualización de archivo recién seleccionado con icono de eliminar -->
+                    <div id="incidentSelectedFilePreview" class="hidden flex items-center justify-between gap-2 p-2 bg-red-50/60 dark:bg-red-950/30 border border-red-200/80 dark:border-red-900/60 rounded-xl">
+                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                            <div class="p-1 rounded-lg bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 shrink-0">
+                                <i data-lucide="file" class="w-3.5 h-3.5"></i>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span id="incidentSelectedFileName" class="text-xs font-medium text-slate-800 dark:text-slate-200 truncate block"></span>
+                                    <span class="text-[9px] px-1.5 py-0.2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 font-bold rounded shrink-0">Nuevo</span>
+                                </div>
+                                <span id="incidentSelectedFileSize" class="text-[10px] text-slate-400 block font-mono"></span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="clearSelectedIncidentFile(event)"
+                            class="p-1 text-slate-400 hover:text-red-600 hover:bg-red-100/80 dark:hover:bg-red-900/50 rounded-lg transition shrink-0"
+                            title="Quitar archivo seleccionado">
+                            <i data-lucide="trash-2" class="w-4 h-4 text-red-500"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Archivos existentes (al editar incidencia) -->
+                <div id="incidentExistingFilesSection" class="hidden space-y-1.5 pt-1">
+                    <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Archivos adjuntos actuales:</span>
+                    <div id="incidentAttachmentsList" class="space-y-1.5 max-h-36 overflow-y-auto"></div>
+                </div>
+
+                <!-- Hidden inputs para IDs marcados para eliminación -->
+                <div id="incidentPendingRemoveInputs"></div>
+            </div>
+
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                 <button type="button" onclick="closeModal('incidentModal')" class="w-full sm:w-auto py-2 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs text-center">Cancelar</button>
-                <button type="submit" class="w-full sm:w-auto py-2 px-4 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl text-xs text-center shadow-xs">Guardar Incidencia</button>
+                <button type="submit" id="btnSubmitIncident" class="w-full sm:w-auto py-2 px-4 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl text-xs text-center shadow-xs">Guardar Incidencia</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- 5. Users List Modal -->
+@if($user->isAdmin())
 <div id="usersListModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 hidden">
     <div class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl max-w-lg w-full p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800">
         <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -3389,17 +3489,7 @@
                             <p class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{{ $u->name }}</p>
                             <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
                                 <p class="text-[10px] text-slate-400 truncate">{{ $u->email }}</p>
-                                <span class="text-slate-300 dark:text-slate-600">&bull;</span>
-                                <div class="flex items-center gap-1">
-                                    <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono" id="user-clave-{{ $u->id }}" data-clave="{{ $u->clave ?? '' }}" data-visible="false">
-                                        {{ $u->clave ? '••••••••' : '(sin clave)' }}
-                                    </span>
-                                    @if($u->clave)
-                                        <button type="button" onclick="toggleUserPassword({{ $u->id }})" class="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition" title="Mostrar/Ocultar contraseña">
-                                            <span id="user-clave-icon-{{ $u->id }}"><i data-lucide="eye" class="w-3 h-3"></i></span>
-                                        </button>
-                                    @endif
-                                </div>
+                                
                             </div>
                         </div>
                     </div>
@@ -3423,6 +3513,7 @@
         </div>
     </div>
 </div>
+@endif
 
 <!-- 6. Recurring Task Modal -->
 <div id="recurringTaskModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-3 sm:p-4">
@@ -3499,11 +3590,13 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hora Inicio (Opcional)</label>
                     <input type="time" id="rec_start_time" name="start_time"
+                        oninput="syncRecurringTaskDateConstraints()" onchange="syncRecurringTaskDateConstraints()"
                         class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Hora Fin (Opcional)</label>
                     <input type="time" id="rec_end_time" name="end_time"
+                        oninput="syncRecurringTaskDateConstraints()" onchange="syncRecurringTaskDateConstraints()"
                         class="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none">
                 </div>
             </div>
@@ -4129,20 +4222,53 @@
     function closeModal(id) {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
+        if (id === 'incidentModal') {
+            if (typeof resetIncidentModalAttachments === 'function') {
+                resetIncidentModalAttachments();
+            }
+        }
     }
 
     // ---- End Date Section ----
     function showEndDate() {
         document.getElementById('end-date-toggle-btn').classList.add('hidden');
         document.getElementById('end-date-section').classList.remove('hidden');
+        const sDateInput = document.getElementById('task_start_date');
+        const eDateInput = document.getElementById('task_end_date');
+        if (sDateInput && eDateInput) {
+            if (sDateInput.value) {
+                eDateInput.min = sDateInput.value;
+                if (!eDateInput.value) {
+                    eDateInput.value = sDateInput.value;
+                }
+            }
+        }
+        if (typeof syncTaskDateConstraints === 'function') {
+            syncTaskDateConstraints();
+        }
         if (window.lucide) lucide.createIcons();
     }
 
     function hideEndDate() {
         document.getElementById('end-date-section').classList.add('hidden');
         document.getElementById('end-date-toggle-btn').classList.remove('hidden');
-        document.getElementById('task_end_date').value = '';
-        document.getElementById('task_end_time').value = '';
+        const eDateInput = document.getElementById('task_end_date');
+        const eTimeInput = document.getElementById('task_end_time');
+        const sDateInput = document.getElementById('task_start_date');
+        if (eDateInput) {
+            eDateInput.value = '';
+            eDateInput.removeAttribute('min');
+        }
+        if (eTimeInput) {
+            eTimeInput.value = '';
+            eTimeInput.removeAttribute('min');
+        }
+        if (sDateInput) {
+            sDateInput.removeAttribute('max');
+        }
+        if (typeof syncTaskDateConstraints === 'function') {
+            syncTaskDateConstraints();
+        }
     }
 
     // ---- Subtask Management ----
@@ -4231,6 +4357,9 @@
         }
     });
 
+    // Current task ID for attachments
+    let currentTaskModalId = null;
+
     // ---- Task Modal ----
     function openTaskModal(task = null, initialStatus = 'no_iniciado', defaultStartDate = null) {
         const form = document.getElementById('taskForm');
@@ -4242,10 +4371,16 @@
         hideEndDate();
 
         if (task) {
+            currentTaskModalId = task.id;
             if (btnPerUser) btnPerUser.classList.add('hidden');
             form.action = '/tasks/' + task.id;
             methodInput.value = 'PUT';
             titleHeading.textContent = 'Editar Tarea';
+            const attSection = document.getElementById('taskAttachmentsSection');
+            if (attSection) {
+                attSection.classList.remove('hidden');
+                loadAttachments('Task', task.id);
+            }
             document.getElementById('task_title').value = task.title || '';
             document.getElementById('task_description').value = task.description || '';
             document.getElementById('task_module_id').value = task.module_id || '';
@@ -4272,16 +4407,21 @@
                 status: st.status || 'no_iniciado'
             }));
             renderSubtasks();
+            if (typeof syncTaskDateConstraints === 'function') syncTaskDateConstraints();
 
         } else {
+            currentTaskModalId = null;
             if (btnPerUser) btnPerUser.classList.remove('hidden');
             form.action = '{{ route('tasks.store') }}';
             methodInput.value = 'POST';
             titleHeading.textContent = 'Nueva Tarea';
+            const attSection = document.getElementById('taskAttachmentsSection');
+            if (attSection) attSection.classList.add('hidden');
             form.reset();
             document.getElementById('task_status').value = initialStatus || 'no_iniciado';
             const todayStr = getBoliviaTodayString();
             document.getElementById('task_start_date').value = defaultStartDate || todayStr;
+            if (typeof syncTaskDateConstraints === 'function') syncTaskDateConstraints();
             renderSubtasks();
         }
 
@@ -4296,13 +4436,13 @@
         }
     }
 
-    // ---- Task Comments Modal & AJAX ----
+    // ---- Task Comments Modal & AJAX (Optimizado + Edición) ----
     let currentCommentTaskId = null;
 
     function openCommentsModal(taskId, taskTitle) {
         currentCommentTaskId = taskId;
         document.getElementById('comment_task_id').value = taskId;
-        document.getElementById('commentsModalTaskTitle').textContent = 'Comentarios: ' + taskTitle;
+        document.getElementById('commentsModalTaskTitle').textContent = 'Comentarios: ' + (taskTitle || '');
         document.getElementById('comment_input').value = '';
         
         const listEl = document.getElementById('commentsList');
@@ -4333,35 +4473,47 @@
     function renderComments(comments) {
         const listEl = document.getElementById('commentsList');
         if (!comments || comments.length === 0) {
-            listEl.innerHTML = '<div class="text-center py-8 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-1.5"><i data-lucide="message-square" class="w-6 h-6 text-slate-300 dark:text-slate-600"></i><span>No hay comentarios aún. ¡Sé el primero en comentar!</span></div>';
+            listEl.innerHTML = '<div id="commentsEmptyPlaceholder" class="text-center py-8 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-1.5"><i data-lucide="message-square" class="w-6 h-6 text-slate-300 dark:text-slate-600"></i><span>No hay comentarios aún. ¡Sé el primero en comentar!</span></div>';
             if (window.lucide) lucide.createIcons();
             return;
         }
 
-        listEl.innerHTML = comments.map(c => `
-            <div class="pt-3 first:pt-0 border-b border-slate-100 dark:border-slate-800 pb-3 last:border-b-0 flex items-start justify-between gap-2.5 sm:gap-3 group">
+        listEl.innerHTML = comments.map(c => renderSingleCommentHtml(c)).join('');
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function renderSingleCommentHtml(c) {
+        return `
+            <div id="comment-item-${c.id}" class="pt-3 first:pt-0 border-b border-slate-100 dark:border-slate-800 pb-3 last:border-b-0 flex items-start justify-between gap-2.5 sm:gap-3 group">
                 <div class="flex items-start gap-2.5 min-w-0 flex-1">
                     <div class="w-7 h-7 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-[10px] flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-800 mt-0.5">
-                        ${escapeHtml(c.user_initials)}
+                        ${escapeHtml(c.user_initials || 'U')}
                     </div>
                     <div class="space-y-1 min-w-0 flex-1">
                         <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                            <span class="text-xs font-bold text-slate-800 dark:text-slate-200">${escapeHtml(c.user_name)}</span>
-                            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.2 rounded font-medium">${escapeHtml(c.user_role)}</span>
-                            <span class="text-[10px] text-slate-400" title="${c.created_at_formatted}">${c.created_at}</span>
+                            <span class="text-xs font-bold text-slate-800 dark:text-slate-200">${escapeHtml(c.user_name || 'Usuario')}</span>
+                            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.2 rounded font-medium">${escapeHtml(c.user_role || '')}</span>
+                            <span class="text-[10px] text-slate-400" title="${c.created_at_formatted || ''}">${c.created_at || ''}</span>
                         </div>
-                        <p class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed break-words">${escapeHtml(c.comment)}</p>
+                        <div id="comment-body-${c.id}">
+                            <p id="comment-text-${c.id}" class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed break-words">${escapeHtml(c.comment)}</p>
+                        </div>
                     </div>
                 </div>
-                ${c.can_delete ? `
-                    <button onclick="deleteComment(${c.id})" class="text-slate-300 hover:text-red-600 transition p-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 shrink-0" title="Eliminar comentario">
-                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    </button>
-                ` : ''}
+                <div class="flex items-center gap-1 shrink-0">
+                    ${c.can_edit ? `
+                        <button type="button" onclick="startEditComment(${c.id})" class="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition p-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100" title="Editar comentario">
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
+                    ` : ''}
+                    ${c.can_delete ? `
+                        <button type="button" onclick="deleteComment(${c.id})" class="text-slate-400 hover:text-red-600 transition p-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100" title="Eliminar comentario">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    ` : ''}
+                </div>
             </div>
-        `).join('');
-
-        if (window.lucide) lucide.createIcons();
+        `;
     }
 
     function submitComment(e) {
@@ -4391,8 +4543,17 @@
             btn.disabled = false;
             if (data.success) {
                 input.value = '';
-                const taskTitle = document.getElementById('commentsModalTaskTitle').textContent.replace('Comentarios: ', '');
-                openCommentsModal(taskId, taskTitle);
+                // Remove placeholder if present
+                const placeholder = document.getElementById('commentsEmptyPlaceholder');
+                if (placeholder) placeholder.remove();
+
+                // Append new comment directly to DOM without re-fetching
+                const listEl = document.getElementById('commentsList');
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = renderSingleCommentHtml(data.comment);
+                listEl.appendChild(tempDiv.firstElementChild);
+                if (window.lucide) lucide.createIcons();
+
                 updateCommentBadge(taskId, data.total_comments);
             } else {
                 alert(data.error || 'Error al guardar comentario.');
@@ -4421,8 +4582,15 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                const taskTitle = document.getElementById('commentsModalTaskTitle').textContent.replace('Comentarios: ', '');
-                openCommentsModal(currentCommentTaskId, taskTitle);
+                const commentItem = document.getElementById(`comment-item-${commentId}`);
+                if (commentItem) commentItem.remove();
+
+                const listEl = document.getElementById('commentsList');
+                if (listEl && listEl.children.length === 0) {
+                    listEl.innerHTML = '<div id="commentsEmptyPlaceholder" class="text-center py-8 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-1.5"><i data-lucide="message-square" class="w-6 h-6 text-slate-300 dark:text-slate-600"></i><span>No hay comentarios aún. ¡Sé el primero en comentar!</span></div>';
+                    if (window.lucide) lucide.createIcons();
+                }
+
                 updateCommentBadge(currentCommentTaskId, data.total_comments);
             } else {
                 alert(data.error || 'No se pudo eliminar el comentario.');
@@ -4431,6 +4599,69 @@
         .catch(err => {
             console.error(err);
             alert('Error de red al eliminar el comentario.');
+        });
+    }
+
+    let commentOriginalTexts = {};
+
+    function startEditComment(commentId) {
+        const textEl = document.getElementById(`comment-text-${commentId}`);
+        const bodyEl = document.getElementById(`comment-body-${commentId}`);
+        if (!textEl || !bodyEl) return;
+
+        const originalText = textEl.textContent.trim();
+        commentOriginalTexts[commentId] = originalText;
+
+        bodyEl.innerHTML = `
+            <div class="space-y-1.5 mt-1">
+                <textarea id="edit-textarea-${commentId}" rows="2" class="w-full text-xs p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">${escapeHtml(originalText)}</textarea>
+                <div class="flex items-center gap-1.5 justify-end">
+                    <button type="button" onclick="cancelEditComment(${commentId})" class="px-2 py-1 text-[11px] rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-300">Cancelar</button>
+                    <button type="button" onclick="saveEditComment(${commentId})" class="px-2.5 py-1 text-[11px] rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 shadow-2xs">Guardar</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function cancelEditComment(commentId) {
+        const bodyEl = document.getElementById(`comment-body-${commentId}`);
+        if (!bodyEl) return;
+        const originalText = commentOriginalTexts[commentId] || '';
+        bodyEl.innerHTML = `<p id="comment-text-${commentId}" class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed break-words">${escapeHtml(originalText)}</p>`;
+    }
+
+    function saveEditComment(commentId) {
+        const textarea = document.getElementById(`edit-textarea-${commentId}`);
+        if (!textarea) return;
+        const newComment = textarea.value.trim();
+        if (!newComment) return alert('El comentario no puede estar vacío.');
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        fetch(`/comments/${commentId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ comment: newComment })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const bodyEl = document.getElementById(`comment-body-${commentId}`);
+                if (bodyEl) {
+                    bodyEl.innerHTML = `<p id="comment-text-${commentId}" class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed break-words">${escapeHtml(data.comment.comment)}</p>`;
+                }
+            } else {
+                alert(data.error || 'Error al actualizar el comentario.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Error de red al guardar el comentario.');
         });
     }
 
@@ -4475,6 +4706,26 @@
         const taskId = e.dataTransfer.getData('text/plain');
         if (!taskId) return;
 
+        moveKanbanTask(taskId, newStatus);
+    }
+
+    function moveKanbanTask(taskId, newStatus) {
+        const card = document.getElementById('kanban-card-' + taskId);
+        if (!card) return;
+
+        const originalCol = card.closest('[data-kanban-col]');
+        const originalStatus = originalCol ? originalCol.getAttribute('data-kanban-col') : null;
+        if (originalStatus === newStatus) return;
+
+        const targetCardsContainer = document.getElementById('kanban-cards-' + newStatus);
+        if (!targetCardsContainer) return;
+
+        // Optimistic DOM move
+        const originalParent = card.parentNode;
+        const originalNextSibling = card.nextSibling;
+        targetCardsContainer.appendChild(card);
+        updateKanbanColumnCounters();
+
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
         const csrfToken = csrfMeta ? csrfMeta.content : '';
 
@@ -4483,7 +4734,8 @@
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({ status: newStatus })
         })
@@ -4491,12 +4743,125 @@
             if (!res.ok) {
                 return res.json().then(data => { throw new Error(data.error || 'Error actualizando estado'); });
             }
-            window.location.reload();
+            return res.json();
+        })
+        .then(data => {
+            // Success: update counters cleanly
+            updateKanbanColumnCounters();
         })
         .catch(err => {
+            // Revert DOM position on failure
+            if (originalParent) {
+                if (originalNextSibling) {
+                    originalParent.insertBefore(card, originalNextSibling);
+                } else {
+                    originalParent.appendChild(card);
+                }
+            }
+            updateKanbanColumnCounters();
             alert(err.message || 'No se pudo mover la tarea');
         });
     }
+
+    function updateKanbanColumnCounters() {
+        document.querySelectorAll('[data-kanban-col]').forEach(col => {
+            const colId = col.getAttribute('data-kanban-col');
+            const container = document.getElementById('kanban-cards-' + colId);
+            const counter = document.getElementById('kanban-counter-' + colId);
+            const emptyMsg = document.getElementById('kanban-empty-' + colId);
+            if (container) {
+                const count = container.querySelectorAll('[data-task-id]').length;
+                if (counter) counter.textContent = count;
+                if (emptyMsg) {
+                    if (count === 0) {
+                        emptyMsg.classList.remove('hidden');
+                    } else {
+                        emptyMsg.classList.add('hidden');
+                    }
+                }
+            }
+        });
+    }
+
+    // Touch Drag support for Mobile Kanban (Punto 6)
+    let touchDragTaskId = null;
+    let touchDragCard = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isTouchDragging = false;
+
+    document.addEventListener('touchstart', function (e) {
+        const card = e.target.closest('[data-task-id]');
+        if (!card) return;
+        // Don't drag if touching interactive element inside card
+        if (e.target.closest('button, a, input, select, textarea')) return;
+
+        touchDragCard = card;
+        touchDragTaskId = card.getAttribute('data-task-id');
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        isTouchDragging = false;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function (e) {
+        if (!touchDragCard || !touchDragTaskId) return;
+
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const deltaX = currentX - touchStartX;
+        const deltaY = currentY - touchStartY;
+
+        // If vertical scroll gesture is dominant, cancel card drag to allow native page scroll
+        if (!isTouchDragging) {
+            if (Math.abs(deltaY) > 12 && Math.abs(deltaY) > Math.abs(deltaX)) {
+                touchDragCard = null;
+                touchDragTaskId = null;
+                return;
+            }
+            if (Math.abs(deltaX) > 14) {
+                isTouchDragging = true;
+                touchDragCard.classList.add('opacity-40', 'scale-98');
+            }
+        }
+
+        if (isTouchDragging) {
+            // Highlight column under touch point
+            const elemUnder = document.elementFromPoint(currentX, currentY);
+            const targetCol = elemUnder ? elemUnder.closest('[data-kanban-col]') : null;
+            document.querySelectorAll('[data-kanban-col]').forEach(col => {
+                if (col === targetCol) {
+                    col.classList.add('ring-2', 'ring-indigo-400', 'bg-indigo-50/40');
+                } else {
+                    col.classList.remove('ring-2', 'ring-indigo-400', 'bg-indigo-50/40');
+                }
+            });
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchend', function (e) {
+        if (isTouchDragging && touchDragCard && touchDragTaskId) {
+            const touch = e.changedTouches[0];
+            const elemUnder = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetCol = elemUnder ? elemUnder.closest('[data-kanban-col]') : null;
+            if (targetCol) {
+                const newStatus = targetCol.getAttribute('data-kanban-col');
+                if (newStatus) {
+                    moveKanbanTask(touchDragTaskId, newStatus);
+                }
+            }
+        }
+
+        if (touchDragCard) {
+            touchDragCard.classList.remove('opacity-40', 'scale-98');
+        }
+        document.querySelectorAll('[data-kanban-col]').forEach(col => {
+            col.classList.remove('ring-2', 'ring-indigo-400', 'bg-indigo-50/40');
+        });
+
+        touchDragCard = null;
+        touchDragTaskId = null;
+        isTouchDragging = false;
+    });
 
     // ---- Project Link Management ----
     const allUsersList = @json($allUsers->map(fn($u) => ['id' => $u->id, 'name' => $u->name, 'role' => $u->role]));
@@ -4783,9 +5148,6 @@
         openModal('moduleModal');
     }
 
-    function openIncidentModal() {
-        openModal('incidentModal');
-    }
 
     function openUsersListModal() {
         resetUserForm();
@@ -4933,12 +5295,14 @@
 
             recSubtasks = (rule.subtasks || []).map(st => ({ title: st.title }));
             renderRecSubtasks();
+            if (typeof syncRecurringTaskDateConstraints === 'function') syncRecurringTaskDateConstraints();
         } else {
             form.action = '{{ route('recurring-tasks.store') }}';
             methodInput.value = 'POST';
             titleHeading.innerHTML = '<i data-lucide="repeat" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i><span>Nueva Tarea Periódica</span>';
             form.reset();
             document.getElementById('rec_start_date').value = getBoliviaTodayString();
+            if (typeof syncRecurringTaskDateConstraints === 'function') syncRecurringTaskDateConstraints();
             renderRecSubtasks();
         }
 
@@ -5638,39 +6002,35 @@
 
             const calCard = document.getElementById('cal-view-calendar');
             if (calCard) {
+                let calResizeTimer = null;
+                const debouncedCalResize = () => {
+                    clearTimeout(calResizeTimer);
+                    calResizeTimer = setTimeout(() => {
+                        const taskModalEl = document.getElementById('taskModal');
+                        if (taskModalEl && !taskModalEl.classList.contains('hidden')) return;
+                        if (window.calendarInstance && (!document.getElementById('calendarModal') || document.getElementById('calendarModal').classList.contains('hidden'))) {
+                            const isSplit = isCalendarSplitMode();
+                            window.calendarInstance.setOption('aspectRatio', isSplit ? 1.35 : (window.innerWidth >= 1280 ? 1.25 : 1.18));
+                            window.calendarInstance.updateSize();
+                            syncCalendarListHeight();
+                        }
+                    }, 120);
+                };
+
                 if (window.ResizeObserver) {
                     let lastCalWidth = 0;
                     new ResizeObserver((entries) => {
-                        const taskModalEl = document.getElementById('taskModal');
-                        if (taskModalEl && !taskModalEl.classList.contains('hidden')) return;
-                        syncCalendarListHeight();
                         for (const entry of entries) {
                             const currentWidth = Math.round(entry.contentRect.width);
-                            if (currentWidth > 0 && Math.abs(currentWidth - lastCalWidth) >= 2) {
+                            if (currentWidth > 0 && Math.abs(currentWidth - lastCalWidth) >= 15) {
                                 lastCalWidth = currentWidth;
-                                if (window.calendarInstance && (!document.getElementById('calendarModal') || document.getElementById('calendarModal').classList.contains('hidden'))) {
-                                    const isSplit = isCalendarSplitMode();
-                                    window.calendarInstance.setOption('aspectRatio', isSplit ? 1.35 : (window.innerWidth >= 1280 ? 1.25 : 1.18));
-                                    window.calendarInstance.updateSize();
-                                    window.calendarInstance.render();
-                                }
+                                debouncedCalResize();
                             }
                         }
                     }).observe(calCard);
                 }
-                window.addEventListener('resize', () => {
-                    const taskModalEl = document.getElementById('taskModal');
-                    if (taskModalEl && !taskModalEl.classList.contains('hidden')) return;
-                    syncCalendarListHeight();
-                    if (window.calendarInstance && (!document.getElementById('calendarModal') || document.getElementById('calendarModal').classList.contains('hidden'))) {
-                        const isSplit = isCalendarSplitMode();
-                        window.calendarInstance.setOption('aspectRatio', isSplit ? 1.35 : (window.innerWidth >= 1280 ? 1.25 : 1.18));
-                        window.calendarInstance.updateSize();
-                        window.calendarInstance.render();
-                    }
-                });
-                setTimeout(syncCalendarListHeight, 100);
-                setTimeout(syncCalendarListHeight, 400);
+                window.addEventListener('resize', debouncedCalResize);
+                setTimeout(syncCalendarListHeight, 150);
             }
         }
     });
@@ -5737,7 +6097,6 @@
             window.calendarInstance.setOption('height', 'auto');
             window.calendarInstance.setOption('aspectRatio', isSplit ? 1.35 : (window.innerWidth >= 1280 ? 1.55 : 1.4));
             window.calendarInstance.updateSize();
-            window.calendarInstance.render();
             if (isSplit) {
                 setTimeout(syncCalendarListHeight, 50);
             }
@@ -5858,6 +6217,661 @@
         }
     };
     saveSettingsReturnView();
+
+    // =========================================================================
+    // CORRECCIÓN GENERAL DE VALIDACIÓN DE FECHAS EN TODO EL SISTEMA
+    // =========================================================================
+
+    /**
+     * Sincroniza dinámicamente las restricciones entre fecha de inicio y fecha de fin
+     * en el formulario de tareas (#taskModal).
+     */
+    function syncTaskDateConstraints(source = null) {
+        const sDateInput = document.getElementById('task_start_date');
+        const eDateInput = document.getElementById('task_end_date');
+        const sTimeInput = document.getElementById('task_start_time');
+        const eTimeInput = document.getElementById('task_end_time');
+
+        if (!sDateInput || !eDateInput) return;
+
+        const sDate = sDateInput.value;
+        const eDate = eDateInput.value;
+        const sTime = sTimeInput ? sTimeInput.value : '';
+        const eTime = eTimeInput ? eTimeInput.value : '';
+
+        // 1. Bloqueo en calendario: La fecha final no puede ser anterior a la fecha inicial
+        if (sDate) {
+            eDateInput.min = sDate;
+            // Si la fecha de finalización deja de ser válida al mover la fecha inicial a una posterior,
+            // ajustar automáticamente para evitar guardar valores inconsistentes
+            if (eDate && eDate < sDate) {
+                eDateInput.value = sDate;
+            }
+        } else {
+            eDateInput.removeAttribute('min');
+        }
+
+        // 2. Si la fecha final está presente, limitar el máximo permitido para la fecha de inicio
+        const currentEDate = eDateInput.value;
+        if (currentEDate) {
+            sDateInput.max = currentEDate;
+            if (sDateInput.value && sDateInput.value > currentEDate) {
+                sDateInput.value = currentEDate;
+            }
+        } else {
+            sDateInput.removeAttribute('max');
+        }
+
+        // 3. Reglas de horas cuando fecha de inicio y fin coinciden en el mismo día
+        const finalSDate = sDateInput.value;
+        const finalEDate = eDateInput.value;
+
+        if (eTimeInput && sTimeInput) {
+            if (finalSDate && finalEDate && finalSDate === finalEDate) {
+                if (sTime) {
+                    eTimeInput.min = sTime;
+                    if (eTime && eTime < sTime) {
+                        eTimeInput.value = sTime;
+                    }
+                } else {
+                    eTimeInput.removeAttribute('min');
+                }
+            } else {
+                eTimeInput.removeAttribute('min');
+            }
+        }
+    }
+
+    /**
+     * Sincroniza dinámicamente las restricciones de horario en tareas periódicas
+     * (#recurringTaskModal).
+     */
+    function syncRecurringTaskDateConstraints() {
+        const sTimeInput = document.getElementById('rec_start_time');
+        const eTimeInput = document.getElementById('rec_end_time');
+        if (!sTimeInput || !eTimeInput) return;
+
+        const sTime = sTimeInput.value;
+        const eTime = eTimeInput.value;
+
+        if (sTime) {
+            eTimeInput.min = sTime;
+            if (eTime && eTime < sTime) {
+                eTimeInput.value = sTime;
+            }
+        } else {
+            eTimeInput.removeAttribute('min');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Enlazar eventos para Tareas Normales
+        const sDateInput = document.getElementById('task_start_date');
+        const eDateInput = document.getElementById('task_end_date');
+        const sTimeInput = document.getElementById('task_start_time');
+        const eTimeInput = document.getElementById('task_end_time');
+
+        if (sDateInput) {
+            sDateInput.addEventListener('change', () => syncTaskDateConstraints('start'));
+            sDateInput.addEventListener('input', () => syncTaskDateConstraints('start'));
+        }
+        if (eDateInput) {
+            eDateInput.addEventListener('change', () => syncTaskDateConstraints('end'));
+            eDateInput.addEventListener('input', () => syncTaskDateConstraints('end'));
+        }
+        if (sTimeInput) {
+            sTimeInput.addEventListener('change', () => syncTaskDateConstraints('time'));
+            sTimeInput.addEventListener('input', () => syncTaskDateConstraints('time'));
+        }
+        if (eTimeInput) {
+            eTimeInput.addEventListener('change', () => syncTaskDateConstraints('time'));
+            eTimeInput.addEventListener('input', () => syncTaskDateConstraints('time'));
+        }
+
+        // Validación en submit de Tareas Normales (comparación lexicográfica ISO libre de desfase horario)
+        const taskForm = document.getElementById('taskForm');
+        if (taskForm) {
+            taskForm.addEventListener('submit', function (e) {
+                const sDate = sDateInput?.value;
+                const sTime = sTimeInput?.value || '00:00';
+                const eDate = eDateInput?.value;
+                const eTime = eTimeInput?.value || '23:59';
+
+                if (sDate && eDate) {
+                    const startStr = `${sDate} ${sTime}`;
+                    const endStr = `${eDate} ${eTime}`;
+                    if (endStr < startStr) {
+                        e.preventDefault();
+                        alert('La fecha y hora de finalización no pueden ser anteriores a la fecha y hora de inicio.');
+                        return false;
+                    }
+                }
+            });
+        }
+
+        // Enlazar eventos para Tareas Periódicas
+        const recSTime = document.getElementById('rec_start_time');
+        const recETime = document.getElementById('rec_end_time');
+
+        if (recSTime) {
+            recSTime.addEventListener('change', syncRecurringTaskDateConstraints);
+            recSTime.addEventListener('input', syncRecurringTaskDateConstraints);
+        }
+        if (recETime) {
+            recETime.addEventListener('change', syncRecurringTaskDateConstraints);
+            recETime.addEventListener('input', syncRecurringTaskDateConstraints);
+        }
+
+        // Validación en submit de Tareas Periódicas
+        const recForm = document.getElementById('recurringTaskForm');
+        if (recForm) {
+            recForm.addEventListener('submit', function (e) {
+                const sTime = recSTime?.value;
+                const eTime = recETime?.value;
+
+                if (sTime && eTime && eTime < sTime) {
+                    e.preventDefault();
+                    alert('La hora de finalización no puede ser anterior a la hora de inicio.');
+                    return false;
+                }
+            });
+        }
+    });
+
+    // =========================================================================
+    // PUNTOS 9, 10, 11: GESTIÓN DE INCIDENCIAS (EDITAR, ASIGNAR, ELIMINAR, CAMBIO DE ESTADO AJAX)
+    // =========================================================================
+    let currentIncidentModalId = null;
+
+    function openIncidentModal(incident = null) {
+        const form = document.getElementById('incidentForm');
+        const methodInput = document.getElementById('incident_method');
+        const titleHeading = document.getElementById('incidentModalTitle');
+        const submitBtn = document.getElementById('btnSubmitIncident');
+        const attSection = document.getElementById('incidentAttachmentsSection');
+
+        if (!form) return;
+
+        // Limpiar siempre estados de archivos adjuntos previos
+        if (typeof resetIncidentModalAttachments === 'function') {
+            resetIncidentModalAttachments();
+        }
+
+        if (incident) {
+            currentIncidentModalId = incident.id;
+            form.action = '/incidents/' + incident.id;
+            methodInput.value = 'PUT';
+            if (titleHeading) titleHeading.textContent = 'Editar Incidencia';
+            if (submitBtn) submitBtn.textContent = 'Actualizar Incidencia';
+
+            document.getElementById('incident_titulo').value = incident.titulo || '';
+            document.getElementById('incident_descripcion').value = incident.descripcion || '';
+            document.getElementById('incident_project_id').value = incident.project_id || '';
+            document.getElementById('incident_assigned_user_id').value = incident.assigned_user_id || '';
+            document.getElementById('incident_prioridad').value = incident.prioridad || 'media';
+            document.getElementById('incident_estado').value = incident.estado || 'abierta';
+
+            if (attSection) attSection.classList.remove('hidden');
+            loadIncidentAttachments(incident.id);
+        } else {
+            currentIncidentModalId = null;
+            form.action = '{{ route('incidents.store') }}';
+            methodInput.value = 'POST';
+            if (titleHeading) titleHeading.textContent = 'Reportar Incidencia';
+            if (submitBtn) submitBtn.textContent = 'Guardar Incidencia';
+            form.reset();
+
+            @if($activeProject)
+                document.getElementById('incident_project_id').value = '{{ $activeProject->id }}';
+            @else
+                document.getElementById('incident_project_id').value = '';
+            @endif
+
+            // En creación, la sección de adjuntar archivo también está visible y lista para usar
+            if (attSection) attSection.classList.remove('hidden');
+        }
+
+        openModal('incidentModal');
+        if (window.lucide) {
+            const modalEl = document.getElementById('incidentModal');
+            if (modalEl) lucide.createIcons({ root: modalEl });
+        }
+    }
+
+    function deleteIncident(incidentId) {
+        if (!confirm('¿Estás seguro de que deseas eliminar esta incidencia?')) return;
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        fetch('/incidents/' + incidentId, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Error al eliminar la incidencia');
+            return res.json();
+        })
+        .then(data => {
+            const card = document.getElementById('inc-card-' + incidentId);
+            if (card) card.remove();
+            updateIncidentColumnCounters();
+        })
+        .catch(err => {
+            console.error(err);
+            alert(err.message || 'No se pudo eliminar la incidencia');
+        });
+    }
+
+    function changeIncidentStatus(incidentId, newStatus, selectElem) {
+        const card = document.getElementById('inc-card-' + incidentId);
+        const originalParent = card ? card.parentNode : null;
+        const originalNext = card ? card.nextSibling : null;
+        const targetCol = document.getElementById('inc-col-' + newStatus);
+
+        if (card && targetCol) {
+            const targetList = targetCol.querySelector('.space-y-3');
+            if (targetList) {
+                const emptyNotice = targetList.querySelector('p');
+                if (emptyNotice && emptyNotice.textContent.includes('Sin incidencias')) {
+                    emptyNotice.remove();
+                }
+                targetList.appendChild(card);
+                updateIncidentColumnCounters();
+            }
+        }
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        fetch('/incidents/' + incidentId + '/status', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ estado: newStatus })
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Error al actualizar estado');
+            return res.json();
+        })
+        .then(data => {
+            updateIncidentColumnCounters();
+        })
+        .catch(err => {
+            console.error(err);
+            // Revert DOM position
+            if (card && originalParent) {
+                if (originalNext) originalParent.insertBefore(card, originalNext);
+                else originalParent.appendChild(card);
+            }
+            updateIncidentColumnCounters();
+            alert('No se pudo actualizar el estado de la incidencia.');
+        });
+    }
+
+    function updateIncidentColumnCounters() {
+        document.querySelectorAll('[data-incident-col]').forEach(col => {
+            const colId = col.getAttribute('data-incident-col');
+            const list = col.querySelector('.space-y-3');
+            const counter = col.querySelector('span.rounded-full');
+            if (list) {
+                const cards = list.querySelectorAll('[id^="inc-card-"]');
+                if (counter) counter.textContent = cards.length;
+                if (cards.length === 0 && !list.querySelector('p')) {
+                    const p = document.createElement('p');
+                    p.className = 'text-center py-6 text-slate-400 dark:text-slate-500 text-xs italic';
+                    p.textContent = 'Sin incidencias en esta columna';
+                    list.appendChild(p);
+                }
+            }
+        });
+    }
+
+    // =========================================================================
+    // PUNTO 17: GESTIÓN DE ARCHIVOS ADJUNTOS (TAREAS E INCIDENCIAS)
+    // =========================================================================
+    function loadAttachments(attachableType, attachableId) {
+        const listId = attachableType === 'Task' ? 'taskAttachmentsList' : 'incidentAttachmentsList';
+        const countId = attachableType === 'Task' ? 'taskAttachmentsCount' : 'incidentAttachmentsCount';
+        const listEl = document.getElementById(listId);
+        const countEl = document.getElementById(countId);
+        if (!listEl) return;
+
+        listEl.innerHTML = '<p class="text-[11px] text-slate-400 italic">Cargando adjuntos...</p>';
+
+        fetch(`/attachments?attachable_type=${attachableType}&attachable_id=${attachableId}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success || !data.attachments || data.attachments.length === 0) {
+                listEl.innerHTML = '<p class="text-[11px] text-slate-400 dark:text-slate-500 italic">No hay archivos adjuntos.</p>';
+                if (countEl) countEl.textContent = '';
+                return;
+            }
+
+            if (countEl) countEl.textContent = `(${data.attachments.length})`;
+
+            listEl.innerHTML = data.attachments.map(att => `
+                <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                        <i data-lucide="file" class="w-4 h-4 text-indigo-500 shrink-0"></i>
+                        <span class="truncate font-medium text-slate-700 dark:text-slate-200" title="${escapeHtml(att.original_name)}">
+                            ${escapeHtml(att.original_name)}
+                        </span>
+                        <span class="text-[10px] text-slate-400 shrink-0">(${escapeHtml(att.formatted_size)})</span>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <a href="/attachments/${att.id}/download" class="p-1 text-slate-500 hover:text-indigo-600 transition" title="Descargar archivo">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        </a>
+                        <button type="button" onclick="deleteAttachment(${att.id}, '${attachableType}', ${attachableId})" class="p-1 text-slate-500 hover:text-red-600 transition" title="Eliminar archivo">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            if (window.lucide) {
+                const rootEl = attachableType === 'Task' ? document.getElementById('taskModal') : document.getElementById('incidentModal');
+                if (rootEl) lucide.createIcons({ root: rootEl });
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            listEl.innerHTML = '<p class="text-[11px] text-red-500">Error al cargar archivos adjuntos.</p>';
+        });
+    }
+
+    function uploadTaskAttachment() {
+        if (!currentTaskModalId) {
+            alert('Guarda primero la tarea antes de adjuntar archivos.');
+            return;
+        }
+        const fileInput = document.getElementById('task_attachment_file');
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            alert('Selecciona un archivo para adjuntar.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('attachable_type', 'Task');
+        formData.append('attachable_id', currentTaskModalId);
+        formData.append('file', fileInput.files[0]);
+
+        const btn = document.getElementById('btnUploadTaskAttachment');
+        if (btn) btn.disabled = true;
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        fetch('/attachments', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (btn) btn.disabled = false;
+            if (data.success) {
+                fileInput.value = '';
+                loadAttachments('Task', currentTaskModalId);
+            } else {
+                alert(data.error || 'Error al subir el archivo.');
+            }
+        })
+        .catch(err => {
+            if (btn) btn.disabled = false;
+            console.error(err);
+            alert('Error de red al subir archivo adjunto.');
+        });
+    }
+
+    // =========================================================================
+    // GESTIÓN DE ARCHIVOS ADJUNTOS EN INCIDENCIAS (CREAR Y EDITAR)
+    // =========================================================================
+    let existingIncidentAttachments = [];
+    let pendingRemoveIncidentAttachmentIds = [];
+
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + (sizes[i] || 'MB');
+    }
+
+    function handleIncidentFileSelected(input) {
+        const preview = document.getElementById('incidentSelectedFilePreview');
+        const nameEl = document.getElementById('incidentSelectedFileName');
+        const sizeEl = document.getElementById('incidentSelectedFileSize');
+
+        if (!input || !input.files || input.files.length === 0) {
+            clearSelectedIncidentFile();
+            return;
+        }
+
+        const file = input.files[0];
+        if (nameEl) nameEl.textContent = file.name;
+        if (sizeEl) sizeEl.textContent = formatFileSize(file.size);
+        if (preview) preview.classList.remove('hidden');
+
+        if (window.lucide && preview) {
+            lucide.createIcons({ root: preview });
+        }
+    }
+
+    function clearSelectedIncidentFile(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        const fileInput = document.getElementById('incident_attachment_file');
+        if (fileInput) fileInput.value = '';
+
+        const preview = document.getElementById('incidentSelectedFilePreview');
+        if (preview) preview.classList.add('hidden');
+
+        const nameEl = document.getElementById('incidentSelectedFileName');
+        if (nameEl) nameEl.textContent = '';
+        const sizeEl = document.getElementById('incidentSelectedFileSize');
+        if (sizeEl) sizeEl.textContent = '';
+    }
+
+    function resetIncidentModalAttachments() {
+        clearSelectedIncidentFile();
+        existingIncidentAttachments = [];
+        pendingRemoveIncidentAttachmentIds = [];
+        syncIncidentPendingRemoveInputs();
+
+        const countEl = document.getElementById('incidentAttachmentsCount');
+        if (countEl) countEl.textContent = '';
+
+        const listEl = document.getElementById('incidentAttachmentsList');
+        if (listEl) listEl.innerHTML = '';
+
+        const existingSection = document.getElementById('incidentExistingFilesSection');
+        if (existingSection) existingSection.classList.add('hidden');
+    }
+
+    function loadIncidentAttachments(incidentId) {
+        const listEl = document.getElementById('incidentAttachmentsList');
+        const countEl = document.getElementById('incidentAttachmentsCount');
+        const existingSection = document.getElementById('incidentExistingFilesSection');
+
+        if (!listEl) return;
+
+        pendingRemoveIncidentAttachmentIds = [];
+        syncIncidentPendingRemoveInputs();
+        listEl.innerHTML = '<p class="text-[11px] text-slate-400 italic">Cargando archivos asociados...</p>';
+
+        fetch(`/attachments?attachable_type=Incident&attachable_id=${incidentId}`, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success || !data.attachments || data.attachments.length === 0) {
+                existingIncidentAttachments = [];
+                if (existingSection) existingSection.classList.add('hidden');
+                if (countEl) countEl.textContent = '';
+                listEl.innerHTML = '';
+                return;
+            }
+
+            existingIncidentAttachments = data.attachments;
+            if (existingSection) existingSection.classList.remove('hidden');
+            renderIncidentExistingAttachments();
+        })
+        .catch(err => {
+            console.error('Error al cargar adjuntos de incidencia:', err);
+            listEl.innerHTML = '<p class="text-[11px] text-red-500">Error al cargar archivos adjuntos.</p>';
+        });
+    }
+
+    function renderIncidentExistingAttachments() {
+        const listEl = document.getElementById('incidentAttachmentsList');
+        const countEl = document.getElementById('incidentAttachmentsCount');
+        const existingSection = document.getElementById('incidentExistingFilesSection');
+        if (!listEl) return;
+
+        if (existingIncidentAttachments.length === 0) {
+            if (existingSection) existingSection.classList.add('hidden');
+            if (countEl) countEl.textContent = '';
+            listEl.innerHTML = '';
+            return;
+        }
+
+        if (existingSection) existingSection.classList.remove('hidden');
+        const activeCount = existingIncidentAttachments.filter(att => !pendingRemoveIncidentAttachmentIds.includes(att.id)).length;
+        if (countEl) countEl.textContent = activeCount > 0 ? `(${activeCount})` : '';
+
+        listEl.innerHTML = existingIncidentAttachments.map(att => {
+            const isMarkedForRemoval = pendingRemoveIncidentAttachmentIds.includes(att.id);
+
+            if (isMarkedForRemoval) {
+                return `
+                    <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-red-50/80 dark:bg-red-950/40 border border-red-200/80 dark:border-red-900/60 text-xs transition">
+                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500 shrink-0"></i>
+                            <span class="truncate line-through text-slate-400 dark:text-slate-500 font-medium" title="${escapeHtml(att.original_name)}">
+                                ${escapeHtml(att.original_name)}
+                            </span>
+                            <span class="text-[9px] px-1.5 py-0.5 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 font-semibold rounded shrink-0">
+                                Se eliminará al guardar
+                            </span>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button type="button" onclick="cancelRemoveIncidentAttachment(${att.id}, event)"
+                                class="px-2 py-0.5 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition"
+                                title="Deshacer eliminación">
+                                Deshacer
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs transition hover:border-slate-300 dark:hover:border-slate-600">
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                        <i data-lucide="file" class="w-3.5 h-3.5 text-red-500 shrink-0"></i>
+                        <span class="truncate font-medium text-slate-700 dark:text-slate-200" title="${escapeHtml(att.original_name)}">
+                            ${escapeHtml(att.original_name)}
+                        </span>
+                        <span class="text-[10px] text-slate-400 shrink-0 font-mono">(${escapeHtml(att.formatted_size || formatFileSize(att.file_size))})</span>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <a href="/attachments/${att.id}/download" target="_blank"
+                            class="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg transition"
+                            title="Descargar archivo">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        </a>
+                        <button type="button" onclick="markIncidentAttachmentForRemoval(${att.id}, event)"
+                            class="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition"
+                            title="Eliminar este archivo">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-500"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        if (window.lucide) {
+            lucide.createIcons({ root: listEl });
+        }
+    }
+
+    function markIncidentAttachmentForRemoval(attId, event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        if (!pendingRemoveIncidentAttachmentIds.includes(attId)) {
+            pendingRemoveIncidentAttachmentIds.push(attId);
+        }
+        syncIncidentPendingRemoveInputs();
+        renderIncidentExistingAttachments();
+    }
+
+    function cancelRemoveIncidentAttachment(attId, event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        pendingRemoveIncidentAttachmentIds = pendingRemoveIncidentAttachmentIds.filter(id => id !== attId);
+        syncIncidentPendingRemoveInputs();
+        renderIncidentExistingAttachments();
+    }
+
+    function syncIncidentPendingRemoveInputs() {
+        const container = document.getElementById('incidentPendingRemoveInputs');
+        if (!container) return;
+        container.innerHTML = pendingRemoveIncidentAttachmentIds.map(id =>
+            `<input type="hidden" name="remove_attachment_ids[]" value="${id}">`
+        ).join('');
+    }
+
+    function deleteAttachment(id, type, attachableId) {
+        if (!confirm('¿Estás seguro de que deseas eliminar este archivo adjunto?')) return;
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+        fetch('/attachments/' + id, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                loadAttachments(type, attachableId);
+            } else {
+                alert(data.error || 'No se pudo eliminar el archivo adjunto.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Error de red al eliminar el archivo adjunto.');
+        });
+    }
 
     // Initialize Mobile Sub-nav states on load
     document.addEventListener('DOMContentLoaded', () => {

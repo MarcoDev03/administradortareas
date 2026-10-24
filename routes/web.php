@@ -45,7 +45,14 @@ Route::middleware('auth')->group(function () {
     // Comentarios de Tareas
     Route::get('/tasks/{task}/comments', [TaskCommentController::class, 'index'])->name('tasks.comments.index');
     Route::post('/tasks/{task}/comments', [TaskCommentController::class, 'store'])->name('tasks.comments.store');
+    Route::patch('/comments/{comment}', [TaskCommentController::class, 'update'])->name('comments.update');
     Route::delete('/comments/{comment}', [TaskCommentController::class, 'destroy'])->name('comments.destroy');
+
+    // Archivos Adjuntos (Tareas e Incidencias)
+    Route::get('/attachments', [\App\Http\Controllers\AttachmentController::class, 'index'])->name('attachments.index');
+    Route::post('/attachments', [\App\Http\Controllers\AttachmentController::class, 'store'])->name('attachments.store');
+    Route::get('/attachments/{attachment}/download', [\App\Http\Controllers\AttachmentController::class, 'download'])->name('attachments.download');
+    Route::delete('/attachments/{attachment}', [\App\Http\Controllers\AttachmentController::class, 'destroy'])->name('attachments.destroy');
 
     // Subtareas
     Route::post('/tasks/{task}/subtasks', [SubtaskController::class, 'store'])->name('subtasks.store');
