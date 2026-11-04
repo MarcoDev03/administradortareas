@@ -7,6 +7,7 @@ use App\Models\Subtask;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class TaskController extends Controller
 {
@@ -290,16 +291,64 @@ class TaskController extends Controller
         return back()->with('success', 'Tarea enviada a la papelera exitosamente.');
     }
 
+    public function emptyTrash(Request $request)
+    {
+        $user = Auth::user();
+
+        if ($user->isHelper()) {
+            abort(403, 'No autorizado para vaciar la papelera.');
+        }
+
+        $visibleProjects = $user->memberProjects()->pluck('projects.id');
+
+        $query = Task::onlyTrashed()
+            ->whereIn('project_id', $visibleProjects);
+
+        if ($request->filled('project_id')) {
+            $query->where('project_id', $request->project_id);
+        }
+
+        $trashedTasks = $query->with('attachments')->get();
+
+        if ($trashedTasks->isEmpty()) {
+            return back()->with('info', 'La papelera ya se encuentra vacía.');
+        }
+
+        DB::transaction(function () use ($trashedTasks) {
+            foreach ($trashedTasks as $task) {
+                foreach ($task->attachments as $att) {
+                    if ($att->file_path && Storage::disk('local')->exists($att->file_path)) {
+                        Storage::disk('local')->delete($att->file_path);
+                    }
+                    $att->delete();
+                }
+
+                $task->assignedUsers()->detach();
+                $task->subtasks()->delete();
+                $task->comments()->delete();
+                $task->forceDelete();
+            }
+        });
+
+        return back()->with('success', 'Papelera vaciada exitosamente.');
+    }
+
     public function restore($id)
     {
         $user = Auth::user();
 
-        $task = Task::onlyTrashed()
-            ->whereHas('assignedUsers', function ($q) use ($user) {
-                $q->where('users.id', $user->id);
-            })
-            ->findOrFail($id);
+        $query = Task::onlyTrashed();
 
+        if ($user->isHelper()) {
+            $query->whereHas('assignedUsers', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        } else {
+            $visibleProjects = $user->memberProjects()->pluck('projects.id');
+            $query->whereIn('project_id', $visibleProjects);
+        }
+
+        $task = $query->findOrFail($id);
         $task->restore();
 
         return back()->with('success', 'Tarea restablecida exitosamente.');
@@ -308,13 +357,30 @@ class TaskController extends Controller
     public function forceDestroy($id)
     {
         $user = Auth::user();
-        $task = Task::onlyTrashed()->findOrFail($id);
+        $query = Task::onlyTrashed();
+
+        if ($user->isHelper()) {
+            $query->whereHas('assignedUsers', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        } else {
+            $visibleProjects = $user->memberProjects()->pluck('projects.id');
+            $query->whereIn('project_id', $visibleProjects);
+        }
+
+        $task = $query->findOrFail($id);
 
         if (!$user->hasFullAccess() && !$task->assignedUsers()->where('users.id', $user->id)->exists()) {
             abort(403, 'No autorizado.');
         }
 
         DB::transaction(function () use ($task) {
+            foreach ($task->attachments as $att) {
+                if ($att->file_path && Storage::disk('local')->exists($att->file_path)) {
+                    Storage::disk('local')->delete($att->file_path);
+                }
+                $att->delete();
+            }
             $task->assignedUsers()->detach();
             $task->subtasks()->delete();
             $task->comments()->delete();

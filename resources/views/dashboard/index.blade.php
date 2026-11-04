@@ -422,11 +422,9 @@
                         ? 'border-red-500 text-red-400 lg:border-red-600 lg:text-red-700 dark:border-red-400 dark:text-red-300' 
                         : 'border-transparent text-slate-300 hover:text-red-400 lg:text-black lg:hover:text-red-700 dark:text-slate-400 dark:hover:text-white' }}">
                     <span>Incidencias</span>
-                    @if($incidents->count() > 0)
-                        <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
-                            {{ $incidents->count() }}
-                        </span>
-                    @endif
+                    <span id="incidents-tab-badge" class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold {{ $incidents->count() > 0 ? '' : 'hidden' }}">
+                        {{ $incidents->count() }}
+                    </span>
                 </a>
 
                 <!-- 6. Tab Tareas Periódicas (Admin/Dev) -->
@@ -461,11 +459,6 @@
                         ? 'border-red-500 text-red-400 lg:border-red-600 lg:text-red-700 dark:border-red-400 dark:text-red-300' 
                         : 'border-transparent text-slate-300 hover:text-red-400 lg:text-black lg:hover:text-red-700 dark:text-slate-400 dark:hover:text-white' }}">
                     <span>Papelera</span>
-                    @if($trashedTasksCount > 0)
-                        <span class="text-[10px] tab-counter-badge px-1.5 py-0.5 rounded-full font-bold">
-                            {{ $trashedTasksCount }}
-                        </span>
-                    @endif
                 </a>
             </nav>
 
@@ -481,7 +474,7 @@
                         <select id="resumen-user-filter" onchange="onResumenUserFilterChange(this.value)"
                             class="pl-9 pr-9 py-1.5 rounded-xl bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs sm:text-sm font-semibold appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500/20 transition min-w-[200px] max-w-[250px] truncate shadow-2xs"
                             title="Filtrar por usuario">
-                            <option value="">Todos los usuarios</option>
+                            <option value="all" {{ $selectedUserId === 'all' ? 'selected' : '' }}>Todos los usuarios</option>
                             @foreach($projectUsers as $pUser)
                                 <option value="{{ $pUser->id }}" {{ (string)$selectedUserId === (string)$pUser->id ? 'selected' : '' }}>
                                     {{ $pUser->name }}
@@ -573,22 +566,22 @@
                 <button type="button" id="subnav-inc-btn-todas" onclick="filterMobileIncidents('todas')"
                     class="inc-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-red-400 text-red-300 font-bold">
                     <span>Todas</span>
-                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->count() }}</span>
+                    <span id="subnav-inc-count-todas" class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->count() }}</span>
                 </button>
                 <button type="button" id="subnav-inc-btn-abierta" onclick="filterMobileIncidents('abierta')"
                     class="inc-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                     <span>Abiertas</span>
-                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'abierta')->count() }}</span>
+                    <span id="subnav-inc-count-abierta" class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'abierta')->count() }}</span>
                 </button>
                 <button type="button" id="subnav-inc-btn-en_proceso" onclick="filterMobileIncidents('en_proceso')"
                     class="inc-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                     <span>En Proceso</span>
-                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'en_proceso')->count() }}</span>
+                    <span id="subnav-inc-count-en_proceso" class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'en_proceso')->count() }}</span>
                 </button>
                 <button type="button" id="subnav-inc-btn-resuelta" onclick="filterMobileIncidents('resuelta')"
                     class="inc-subnav-btn flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 whitespace-nowrap transition shrink-0 border-transparent text-slate-300 hover:text-white">
                     <span>Resueltas</span>
-                    <span class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'resuelta')->count() }}</span>
+                    <span id="subnav-inc-count-resuelta" class="text-[10px] tab-counter-badge px-1.5 py-0.2 rounded-full font-bold">{{ $incidents->where('estado', 'resuelta')->count() }}</span>
                 </button>
 
             @elseif($activeView === 'enlaces')
@@ -750,7 +743,7 @@
                                 <select onchange="onResumenUserFilterChange(this.value)"
                                     class="w-full sm:w-auto pl-9 pr-9 py-2 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 text-xs sm:text-sm font-semibold appearance-none cursor-pointer outline-none focus:ring-2 focus:ring-indigo-500/20 shadow-2xs"
                                     title="Filtrar por usuario">
-                                    <option value="">Todos los usuarios</option>
+                                    <option value="all" {{ $selectedUserId === 'all' ? 'selected' : '' }}>Todos los usuarios</option>
                                     @foreach($projectUsers as $pUser)
                                         <option value="{{ $pUser->id }}" {{ (string)$selectedUserId === (string)$pUser->id ? 'selected' : '' }}>
                                             {{ $pUser->name }}
@@ -816,7 +809,7 @@
                                     <i data-lucide="shield-alert" class="w-5 h-5 lg:w-6 lg:h-6"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $incidents->count() }}</span>
+                                    <span id="kpi-incidents-count" class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $incidents->count() }}</span>
                                     <span class="text-xs sm:text-sm font-bold text-black dark:text-slate-300 mt-1.5 block truncate">Incidencias</span>
                                 </div>
                             </div>
@@ -1793,7 +1786,7 @@
                                                                 <button onclick='openTaskModal(@json($t->load(["assignedUsers", "subtasks"])))' class="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Editar tarea">
                                                                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                                                 </button>
-                                                                <form method="POST" action="{{ route('tasks.destroy', $t->id) }}" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta tarea?');" class="inline">
+                                                                <form method="POST" action="{{ route('tasks.destroy', $t->id) }}" onsubmit="return confirmDelete(event, this, { title: '¿Eliminar tarea?', message: 'La tarea se enviará a la papelera. Podrás restaurarla más tarde si lo necesitas.', confirmText: 'Eliminar tarea' });" class="inline">
                                                                     @csrf @method('DELETE')
                                                                     <button type="submit" class="p-1 text-slate-400 hover:text-red-600 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="Eliminar tarea">
                                                                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -1879,10 +1872,10 @@
                     @foreach($columns as $col)
                         @php $colTasks = $filteredTasks->where('status', $col['id']); @endphp
                         <div id="kanban-col-{{ $col['id'] }}" data-kanban-col="{{ $col['id'] }}" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, '{{ $col['id'] }}')"
-                            class="bg-slate-100/90 dark:bg-slate-900/80 rounded-2xl border-t-4 {{ $col['border'] }} border-x border-b border-slate-200/80 dark:border-slate-800 flex flex-col max-h-[75vh] transition-all duration-200 shadow-soft kanban-column">
+                            class="bg-slate-100/90 dark:bg-slate-900/80 rounded-2xl border-t-4 {{ $col['border'] }} border-x border-b border-slate-200/80 dark:border-slate-800 flex flex-col h-[75vh] sm:h-[78vh] lg:h-[calc(100vh-230px)] max-h-[calc(100vh-230px)] min-h-[460px] transition-all duration-200 shadow-soft kanban-column">
                             
                             <!-- Column Header -->
-                            <div class="p-3 sm:p-3.5 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white/40 dark:bg-slate-900/40 rounded-t-xl">
+                            <div class="p-3 sm:p-3.5 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white/70 dark:bg-slate-900/70 rounded-t-xl sticky top-0 z-10 backdrop-blur-xs">
                                 <div class="flex items-center space-x-2">
                                     <i data-lucide="{{ $col['icon'] }}" class="w-4 h-4 {{ $col['badgeText'] }}"></i>
                                     <h3 class="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-200">{{ $col['title'] }}</h3>
@@ -1899,7 +1892,7 @@
                             </div>
 
                             <!-- Cards Scrollable Area -->
-                            <div id="kanban-cards-{{ $col['id'] }}" class="kanban-cards-container p-2 sm:p-2.5 space-y-2.5 overflow-y-auto flex-1 no-scrollbar">
+                            <div id="kanban-cards-{{ $col['id'] }}" class="kanban-cards-container kanban-scrollable p-2 sm:p-2.5 space-y-2.5 overflow-y-auto overscroll-contain flex-1 pr-1.5">
                                 @if($colTasks->isEmpty())
                                     <div id="kanban-empty-{{ $col['id'] }}" class="kanban-empty-msg text-center py-8 text-slate-400 dark:text-slate-500 text-xs italic {{ $colTasks->isEmpty() ? '' : 'hidden' }}">
                                         Sin tareas
@@ -1927,7 +1920,7 @@
                                                         <button onclick='openTaskModal(@json($t->load(["assignedUsers", "subtasks"])))' class="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Editar tarea">
                                                             <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                                         </button>
-                                                        <form method="POST" action="{{ route('tasks.destroy', $t->id) }}" onsubmit="return confirm('¿Estás seguro de que deseas eliminar esta tarea?');" class="inline">
+                                                        <form method="POST" action="{{ route('tasks.destroy', $t->id) }}" onsubmit="return confirmDelete(event, this, { title: '¿Eliminar tarea?', message: 'La tarea se enviará a la papelera. Podrás restaurarla más tarde si lo necesitas.', confirmText: 'Eliminar tarea' });" class="inline">
                                                             @csrf @method('DELETE')
                                                             <button type="submit" class="p-1 text-slate-400 hover:text-red-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700" title="Eliminar tarea">
                                                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -2112,10 +2105,10 @@
                                         <p class="text-center py-6 text-slate-400 dark:text-slate-500 text-xs italic">Sin incidencias en esta columna</p>
                                     @else
                                         @foreach($incItems as $inc)
-                                            <div id="inc-card-{{ $inc->id }}" class="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-2.5 group shadow-2xs hover:shadow-xs transition">
+                                            <div id="inc-card-{{ $inc->id }}" onclick='openIncidentModal(@json($inc))' class="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-2.5 group shadow-2xs hover:shadow-xs transition cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700">
                                                 <div class="flex items-start justify-between gap-2">
                                                     <div class="flex-1 min-w-0">
-                                                        <h5 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white break-words leading-tight">{{ $inc->titulo }}</h5>
+                                                        <h5 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white break-words leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition">{{ $inc->titulo }}</h5>
                                                         <div class="flex items-center gap-1.5 mt-1 flex-wrap">
                                                             <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded {{ $inc->project ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60' : 'bg-slate-200/70 dark:bg-slate-700 text-slate-700 dark:text-slate-300' }}">
                                                                 {{ $inc->project ? $inc->project->name : 'General (Sin proyecto)' }}
@@ -2133,11 +2126,11 @@
                                                             {{ $inc->prioridad === 'urgente' ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300' }}">
                                                             {{ $inc->prioridad }}
                                                         </span>
-                                                        @if(!$user->isHelper() || Auth::id() === $inc->reported_by)
-                                                            <button type="button" onclick='openIncidentModal(@json($inc))' class="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition" title="Editar incidencia">
+                                                        @if($user->hasFullAccess() || Auth::id() === $inc->user_id)
+                                                            <button type="button" onclick='event.stopPropagation(); openIncidentModal(@json($inc))' class="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition" title="Editar / Ver incidencia">
                                                                 <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                                             </button>
-                                                            <button type="button" onclick="deleteIncident({{ $inc->id }})" class="p-1 text-slate-400 hover:text-red-600 rounded transition" title="Eliminar incidencia">
+                                                            <button type="button" onclick="event.stopPropagation(); deleteIncident({{ $inc->id }})" class="p-1 text-slate-400 hover:text-red-600 rounded transition" title="Eliminar incidencia">
                                                                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                                                             </button>
                                                         @endif
@@ -2150,7 +2143,7 @@
                                                     <span class="truncate max-w-[180px]">Reportado: <strong>{{ $inc->reporter ? $inc->reporter->name : 'Anónimo' }}</strong></span>
                                                     <div class="flex items-center gap-1.5">
                                                         <label class="text-[10px] text-slate-400">Estado:</label>
-                                                        <select name="estado" onchange="changeIncidentStatus({{ $inc->id }}, this.value, this)" class="text-[10px] font-semibold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-0.5 text-slate-700 dark:text-slate-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                                        <select name="estado" onclick="event.stopPropagation()" onchange="changeIncidentStatus({{ $inc->id }}, this.value, this)" class="text-[10px] font-semibold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-0.5 text-slate-700 dark:text-slate-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500">
                                                             <option value="abierta" {{ $inc->estado === 'abierta' ? 'selected' : '' }}>Abierta</option>
                                                             <option value="en_proceso" {{ $inc->estado === 'en_proceso' ? 'selected' : '' }}>En Proceso</option>
                                                             <option value="resuelta" {{ $inc->estado === 'resuelta' ? 'selected' : '' }}>Resuelta</option>
@@ -2281,7 +2274,7 @@
                                                 <button onclick='openRecurringTaskModal(@json($rule->load(["assignedUsers", "subtasks"])))' class="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition" title="Editar regla">
                                                     <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                                                 </button>
-                                                <form method="POST" action="{{ route('recurring-tasks.destroy', $rule->id) }}" onsubmit="return confirm('¿Eliminar esta regla periódica?');" class="inline">
+                                                <form method="POST" action="{{ route('recurring-tasks.destroy', $rule->id) }}" onsubmit="return confirmDelete(event, this, { title: '¿Eliminar regla periódica?', message: 'Esta regla ya no generará tareas automáticas programadas en el calendario. Las tareas creadas anteriormente se conservarán.', confirmText: 'Eliminar regla' });" class="inline">
                                                     @csrf @method('DELETE')
                                                     <button type="submit" class="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Eliminar regla">
                                                         <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -2317,29 +2310,45 @@
                             </div>
                         </div>
 
-                        <!-- Filtros de Tiempo: Todas, Día, Semana, Mes -->
-                        <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl overflow-x-auto no-scrollbar shrink-0 text-xs">
-                            <a href="{{ route('dashboard', ['project_id' => $activeProject ? $activeProject->id : '', 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'todas']) }}"
-                                class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $trashFilter === 'todas' ? 'bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
-                                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-                                <span>Todas</span>
-                                <span class="px-1.5 py-0.2 text-[10px] rounded-full {{ $trashFilter === 'todas' ? 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $allTrashCount }}</span>
-                            </a>
-                            <a href="{{ route('dashboard', ['project_id' => $activeProject ? $activeProject->id : '', 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'dia']) }}"
-                                class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $trashFilter === 'dia' ? 'bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
-                                <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
-                                <span>Día</span>
-                            </a>
-                            <a href="{{ route('dashboard', ['project_id' => $activeProject ? $activeProject->id : '', 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'semana']) }}"
-                                class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $trashFilter === 'semana' ? 'bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
-                                <i data-lucide="calendar-days" class="w-3.5 h-3.5"></i>
-                                <span>Semana</span>
-                            </a>
-                            <a href="{{ route('dashboard', ['project_id' => $activeProject ? $activeProject->id : '', 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'mes']) }}"
-                                class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $trashFilter === 'mes' ? 'bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
-                                <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
-                                <span>Mes</span>
-                            </a>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            @if(!$user->isHelper() && $allTrashCount > 0)
+                                <form method="POST" action="{{ route('tasks.emptyTrash') }}" onsubmit="return confirmDelete(event, this, { title: '¿Vaciar toda la papelera?', message: 'Todas las tareas que se encuentran en la papelera serán eliminadas de forma definitiva.', confirmText: 'Vaciar papelera', isPermanent: true, permanentText: 'Advertencia: Esta acción es permanente e irreversible. No se podrán recuperar las tareas eliminadas.' });" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    @if($activeProject)
+                                        <input type="hidden" name="project_id" value="{{ $activeProject->id }}">
+                                    @endif
+                                    <button type="submit" class="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition cursor-pointer">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                        <span>Vaciar papelera</span>
+                                    </button>
+                                </form>
+                            @endif
+
+                            <!-- Filtros de Tiempo: Todas, Día, Semana, Mes -->
+                            <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl overflow-x-auto no-scrollbar shrink-0 text-xs">
+                                <a href="{{ route('dashboard', ['project_id' => $activeProject ? $activeProject->id : '', 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'todas']) }}"
+                                    class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $trashFilter === 'todas' ? 'bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
+                                    <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                                    <span>Todas</span>
+                                    <span class="px-1.5 py-0.2 text-[10px] rounded-full {{ $trashFilter === 'todas' ? 'bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300' }}">{{ $allTrashCount }}</span>
+                                </a>
+                                <a href="{{ route('dashboard', ['project_id' => $activeProject ? $activeProject->id : '', 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'dia']) }}"
+                                    class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $trashFilter === 'dia' ? 'bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
+                                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                                    <span>Día</span>
+                                </a>
+                                <a href="{{ route('dashboard', ['project_id' => $activeProject ? $activeProject->id : '', 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'semana']) }}"
+                                    class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $trashFilter === 'semana' ? 'bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
+                                    <i data-lucide="calendar-days" class="w-3.5 h-3.5"></i>
+                                    <span>Semana</span>
+                                </a>
+                                <a href="{{ route('dashboard', ['project_id' => $activeProject ? $activeProject->id : '', 'module_id' => $activeModuleId, 'view' => 'papelera', 'trash_filter' => 'mes']) }}"
+                                    class="px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 whitespace-nowrap {{ $trashFilter === 'mes' ? 'bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white' }}">
+                                    <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
+                                    <span>Mes</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
 
@@ -2452,7 +2461,7 @@
                                         </form>
 
                                         @if($user->hasFullAccess())
-                                            <form method="POST" action="{{ route('tasks.forceDestroy', $t->id) }}" onsubmit="return confirm('¿Eliminar definitivamente esta tarea? Esta acción no se puede deshacer.');" class="inline-block">
+                                            <form method="POST" action="{{ route('tasks.forceDestroy', $t->id) }}" onsubmit="return confirmDelete(event, this, { title: '¿Eliminar definitivamente?', message: 'Esta acción es definitiva y no se puede deshacer. La tarea será eliminada permanentemente del sistema.', confirmText: 'Eliminar definitivamente', isPermanent: true, permanentText: 'Advertencia: La tarea no se podrá recuperar de ninguna manera.' });" class="inline-block">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition" title="Eliminar">
@@ -3431,9 +3440,15 @@
                 <div id="incidentPendingRemoveInputs"></div>
             </div>
 
-            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button type="button" onclick="closeModal('incidentModal')" class="w-full sm:w-auto py-2 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs text-center">Cancelar</button>
-                <button type="submit" id="btnSubmitIncident" class="w-full sm:w-auto py-2 px-4 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl text-xs text-center shadow-xs">Guardar Incidencia</button>
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" id="btnDeleteIncidentModal" onclick="confirmDeleteCurrentIncident()" class="hidden w-full sm:w-auto py-2 px-3.5 bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/80 dark:hover:bg-red-900 dark:text-red-300 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition border border-red-200 dark:border-red-900 cursor-pointer" title="Eliminar incidencia">
+                    <i data-lucide="trash-2" class="w-4 h-4 text-red-600 dark:text-red-400"></i>
+                    <span>Eliminar incidencia</span>
+                </button>
+                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 w-full sm:w-auto sm:ml-auto">
+                    <button type="button" onclick="closeModal('incidentModal')" class="w-full sm:w-auto py-2 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs text-center cursor-pointer">Cancelar</button>
+                    <button type="submit" id="btnSubmitIncident" class="w-full sm:w-auto py-2 px-4 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl text-xs text-center shadow-xs cursor-pointer">Guardar Incidencia</button>
+                </div>
             </div>
         </form>
     </div>
@@ -3499,7 +3514,7 @@
                             <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
                         </button>
                         @if(Auth::id() !== $u->id)
-                            <form method="POST" action="{{ route('users.destroy', $u->id) }}" onsubmit="return confirm('¿Estás seguro de que deseas eliminar a {{ $u->name }}?');" class="inline">
+                            <form method="POST" action="{{ route('users.destroy', $u->id) }}" onsubmit="return confirmDelete(event, this, { title: '¿Eliminar usuario?', message: '¿Estás seguro de que deseas eliminar a {{ addslashes($u->name) }}? Perderá el acceso al sistema inmediatamente.', confirmText: 'Eliminar usuario', isPermanent: true, permanentText: 'Advertencia: Se removerá el acceso de esta cuenta del sistema.' });" class="inline">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition" title="Eliminar usuario">
@@ -4567,38 +4582,44 @@
     }
 
     function deleteComment(commentId) {
-        if (!confirm('¿Eliminar este comentario?')) return;
+        openDeleteConfirm({
+            title: '¿Eliminar comentario?',
+            message: 'El comentario será eliminado y ya no estará visible en esta tarea.',
+            confirmText: 'Eliminar comentario',
+            isPermanent: false,
+            onConfirm: () => {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                fetch(`/comments/${commentId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        const commentItem = document.getElementById(`comment-item-${commentId}`);
+                        if (commentItem) commentItem.remove();
 
-        fetch(`/comments/${commentId}`, {
-            method: 'DELETE',
-            headers: {
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'X-Requested-With': 'XMLHttpRequest'
+                        const listEl = document.getElementById('commentsList');
+                        if (listEl && listEl.children.length === 0) {
+                            listEl.innerHTML = '<div id="commentsEmptyPlaceholder" class="text-center py-8 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-1.5"><i data-lucide="message-square" class="w-6 h-6 text-slate-300 dark:text-slate-600"></i><span>No hay comentarios aún. ¡Sé el primero en comentar!</span></div>';
+                            if (window.lucide) lucide.createIcons();
+                        }
+
+                        updateCommentBadge(currentCommentTaskId, data.total_comments);
+                    } else {
+                        alert(data.error || 'No se pudo eliminar el comentario.');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Error de red al eliminar el comentario.');
+                });
             }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                const commentItem = document.getElementById(`comment-item-${commentId}`);
-                if (commentItem) commentItem.remove();
-
-                const listEl = document.getElementById('commentsList');
-                if (listEl && listEl.children.length === 0) {
-                    listEl.innerHTML = '<div id="commentsEmptyPlaceholder" class="text-center py-8 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-1.5"><i data-lucide="message-square" class="w-6 h-6 text-slate-300 dark:text-slate-600"></i><span>No hay comentarios aún. ¡Sé el primero en comentar!</span></div>';
-                    if (window.lucide) lucide.createIcons();
-                }
-
-                updateCommentBadge(currentCommentTaskId, data.total_comments);
-            } else {
-                alert(data.error || 'No se pudo eliminar el comentario.');
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert('Error de red al eliminar el comentario.');
         });
     }
 
@@ -4729,7 +4750,7 @@
         const csrfMeta = document.querySelector('meta[name="csrf-token"]');
         const csrfToken = csrfMeta ? csrfMeta.content : '';
 
-        fetch('/tasks/' + taskId + '/status', {
+        fetch('{{ url('/tasks') }}/' + taskId + '/status', {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -5478,10 +5499,10 @@
 
     window.onResumenUserFilterChange = function(userId) {
         const url = new URL(window.location.href);
-        if (userId) {
+        if (userId && userId !== 'all') {
             url.searchParams.set('user_id', userId);
         } else {
-            url.searchParams.delete('user_id');
+            url.searchParams.set('user_id', 'all');
         }
         const statusSelect = document.getElementById('resumen-all-tasks-status-filter');
         if (statusSelect && statusSelect.value && statusSelect.value !== 'all') {
@@ -6397,12 +6418,26 @@
             resetIncidentModalAttachments();
         }
 
+        const deleteBtn = document.getElementById('btnDeleteIncidentModal');
+
         if (incident) {
             currentIncidentModalId = incident.id;
-            form.action = '/incidents/' + incident.id;
+            form.action = '{{ url('/incidents') }}/' + incident.id;
             methodInput.value = 'PUT';
-            if (titleHeading) titleHeading.textContent = 'Editar Incidencia';
+            if (titleHeading) titleHeading.textContent = 'Detalles de la Incidencia';
             if (submitBtn) submitBtn.textContent = 'Actualizar Incidencia';
+
+            if (deleteBtn) {
+                const userHasFullAccess = {{ $user->hasFullAccess() ? 'true' : 'false' }};
+                const currentUserId = {{ (int) Auth::id() }};
+                const isOwner = incident.user_id !== undefined && incident.user_id !== null &&
+                                (Number(incident.user_id) === currentUserId || String(incident.user_id) === String(currentUserId));
+                if (userHasFullAccess || isOwner) {
+                    deleteBtn.classList.remove('hidden');
+                } else {
+                    deleteBtn.classList.add('hidden');
+                }
+            }
 
             document.getElementById('incident_titulo').value = incident.titulo || '';
             document.getElementById('incident_descripcion').value = incident.descripcion || '';
@@ -6415,6 +6450,7 @@
             loadIncidentAttachments(incident.id);
         } else {
             currentIncidentModalId = null;
+            if (deleteBtn) deleteBtn.classList.add('hidden');
             form.action = '{{ route('incidents.store') }}';
             methodInput.value = 'POST';
             if (titleHeading) titleHeading.textContent = 'Reportar Incidencia';
@@ -6438,31 +6474,54 @@
         }
     }
 
-    function deleteIncident(incidentId) {
-        if (!confirm('¿Estás seguro de que deseas eliminar esta incidencia?')) return;
+    function confirmDeleteCurrentIncident() {
+        if (!currentIncidentModalId) return;
+        deleteIncident(currentIncidentModalId, true);
+    }
 
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    function deleteIncident(incidentId, fromModal = false) {
+        openDeleteConfirm({
+            title: '¿Eliminar incidencia?',
+            message: 'Esta acción no se puede deshacer. Se eliminarán definitivamente la incidencia y sus archivos adjuntos asociados.',
+            confirmText: 'Eliminar incidencia',
+            isPermanent: true,
+            permanentText: 'Advertencia: La incidencia se eliminará de forma permanente.',
+            onConfirm: () => {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+                const url = '{{ url('/incidents') }}/' + incidentId;
 
-        fetch('/incidents/' + incidentId, {
-            method: 'DELETE',
-            headers: {
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'X-Requested-With': 'XMLHttpRequest'
+                fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(async res => {
+                    const data = await res.json().catch(() => null);
+                    if (!res.ok) {
+                        throw new Error(data?.error || data?.message || 'Error al eliminar la incidencia');
+                    }
+                    return data;
+                })
+                .then(data => {
+                    // Cerrar el modal de detalles
+                    closeModal('incidentModal');
+                    currentIncidentModalId = null;
+
+                    // Eliminar la tarjeta del tablero
+                    const card = document.getElementById('inc-card-' + incidentId);
+                    if (card) card.remove();
+
+                    // Actualizar contadores
+                    updateIncidentColumnCounters();
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert(err.message || 'No se pudo eliminar la incidencia');
+                });
             }
-        })
-        .then(res => {
-            if (!res.ok) throw new Error('Error al eliminar la incidencia');
-            return res.json();
-        })
-        .then(data => {
-            const card = document.getElementById('inc-card-' + incidentId);
-            if (card) card.remove();
-            updateIncidentColumnCounters();
-        })
-        .catch(err => {
-            console.error(err);
-            alert(err.message || 'No se pudo eliminar la incidencia');
         });
     }
 
@@ -6485,8 +6544,9 @@
         }
 
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const url = '{{ url('/incidents') }}/' + incidentId + '/status';
 
-        fetch('/incidents/' + incidentId + '/status', {
+        fetch(url, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
@@ -6496,9 +6556,10 @@
             },
             body: JSON.stringify({ estado: newStatus })
         })
-        .then(res => {
-            if (!res.ok) throw new Error('Error al actualizar estado');
-            return res.json();
+        .then(async res => {
+            const data = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(data?.error || data?.message || 'Error al actualizar estado');
+            return data;
         })
         .then(data => {
             updateIncidentColumnCounters();
@@ -6516,14 +6577,26 @@
     }
 
     function updateIncidentColumnCounters() {
+        let totalCount = 0;
+        let countsByStatus = {
+            abierta: 0,
+            en_proceso: 0,
+            resuelta: 0
+        };
+
         document.querySelectorAll('[data-incident-col]').forEach(col => {
             const colId = col.getAttribute('data-incident-col');
             const list = col.querySelector('.space-y-3');
             const counter = col.querySelector('span.rounded-full');
             if (list) {
                 const cards = list.querySelectorAll('[id^="inc-card-"]');
-                if (counter) counter.textContent = cards.length;
-                if (cards.length === 0 && !list.querySelector('p')) {
+                const count = cards.length;
+                totalCount += count;
+                if (colId && countsByStatus.hasOwnProperty(colId)) {
+                    countsByStatus[colId] = count;
+                }
+                if (counter) counter.textContent = count;
+                if (count === 0 && !list.querySelector('p')) {
                     const p = document.createElement('p');
                     p.className = 'text-center py-6 text-slate-400 dark:text-slate-500 text-xs italic';
                     p.textContent = 'Sin incidencias en esta columna';
@@ -6531,6 +6604,30 @@
                 }
             }
         });
+
+        const tabBadge = document.getElementById('incidents-tab-badge');
+        if (tabBadge) {
+            tabBadge.textContent = totalCount;
+            if (totalCount > 0) {
+                tabBadge.classList.remove('hidden');
+            } else {
+                tabBadge.classList.add('hidden');
+            }
+        }
+
+        const subnavTodas = document.getElementById('subnav-inc-count-todas');
+        if (subnavTodas) subnavTodas.textContent = totalCount;
+        const subnavAbierta = document.getElementById('subnav-inc-count-abierta');
+        if (subnavAbierta) subnavAbierta.textContent = countsByStatus.abierta;
+        const subnavEnProceso = document.getElementById('subnav-inc-count-en_proceso');
+        if (subnavEnProceso) subnavEnProceso.textContent = countsByStatus.en_proceso;
+        const subnavResuelta = document.getElementById('subnav-inc-count-resuelta');
+        if (subnavResuelta) subnavResuelta.textContent = countsByStatus.resuelta;
+
+        const kpiCount = document.getElementById('kpi-incidents-count');
+        if (kpiCount) {
+            kpiCount.textContent = totalCount;
+        }
     }
 
     // =========================================================================
@@ -6847,29 +6944,36 @@
     }
 
     function deleteAttachment(id, type, attachableId) {
-        if (!confirm('¿Estás seguro de que deseas eliminar este archivo adjunto?')) return;
+        openDeleteConfirm({
+            title: '¿Eliminar archivo adjunto?',
+            message: 'El archivo adjunto se eliminará de forma permanente.',
+            confirmText: 'Eliminar archivo',
+            isPermanent: true,
+            permanentText: 'Advertencia: El archivo se eliminará definitivamente del almacenamiento.',
+            onConfirm: () => {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-
-        fetch('/attachments/' + id, {
-            method: 'DELETE',
-            headers: {
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'X-Requested-With': 'XMLHttpRequest'
+                fetch('/attachments/' + id, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        loadAttachments(type, attachableId);
+                    } else {
+                        alert(data.error || 'No se pudo eliminar el archivo adjunto.');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Error de red al eliminar el archivo adjunto.');
+                });
             }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                loadAttachments(type, attachableId);
-            } else {
-                alert(data.error || 'No se pudo eliminar el archivo adjunto.');
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            alert('Error de red al eliminar el archivo adjunto.');
         });
     }
 
@@ -6901,6 +7005,34 @@
 </script>
 
 <style>
+/* Scroll vertical independiente para columnas de Kanban */
+.kanban-scrollable {
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
+}
+.kanban-scrollable::-webkit-scrollbar {
+    width: 6px;
+}
+.kanban-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+}
+.kanban-scrollable::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.5);
+    border-radius: 9999px;
+}
+.kanban-scrollable::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(100, 116, 139, 0.8);
+}
+.dark .kanban-scrollable::-webkit-scrollbar-thumb {
+    background-color: rgba(71, 85, 105, 0.6);
+}
+.dark .kanban-scrollable::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(148, 163, 184, 0.7);
+}
+
 /* Optimización de rendimiento para selects en el modal Agregar Tarea */
 #taskModal {
     will-change: opacity;

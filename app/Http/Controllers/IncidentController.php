@@ -238,13 +238,16 @@ class IncidentController extends Controller
         }
 
         $id = $incident->id;
-        foreach ($incident->attachments as $att) {
-            if (Storage::disk('local')->exists($att->file_path)) {
-                Storage::disk('local')->delete($att->file_path);
+
+        DB::transaction(function () use ($incident) {
+            foreach ($incident->attachments as $att) {
+                if ($att->file_path && Storage::disk('local')->exists($att->file_path)) {
+                    Storage::disk('local')->delete($att->file_path);
+                }
             }
-        }
-        $incident->attachments()->delete();
-        $incident->delete();
+            $incident->attachments()->delete();
+            $incident->delete();
+        });
 
         if (request()->wantsJson() || request()->ajax()) {
             return response()->json([

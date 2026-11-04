@@ -91,7 +91,23 @@ class DashboardController extends Controller
         }
 
         $selectedUserId = $request->query('user_id');
-        if ($selectedUserId && !$projectUsers->contains('id', (int)$selectedUserId) && !$allUsers->contains('id', (int)$selectedUserId)) {
+
+        // Punto 2: Por defecto en la vista de estadísticas/resumen, mostrar únicamente las del usuario logueado
+        if ($activeView === 'resumen' && !$request->has('user_id')) {
+            $selectedUserId = (string) $user->id;
+        }
+
+        if ($selectedUserId === 'all' || $selectedUserId === 'todos') {
+            $selectedUserId = 'all';
+        } elseif ($selectedUserId && is_numeric($selectedUserId)) {
+            $selectedUserId = (int) $selectedUserId;
+            // Si el usuario es Ayudante, no permitir visualizar información de otros usuarios
+            if ($user->isHelper() && $selectedUserId !== $user->id) {
+                $selectedUserId = $user->id;
+            } elseif (!$projectUsers->contains('id', $selectedUserId) && !$allUsers->contains('id', $selectedUserId)) {
+                $selectedUserId = $user->id;
+            }
+        } else {
             $selectedUserId = null;
         }
 
@@ -109,7 +125,7 @@ class DashboardController extends Controller
             $recurringTasksQuery->whereHas('assignedUsers', function ($q) use ($user) {
                 $q->where('users.id', $user->id);
             });
-        } elseif ($selectedUserId) {
+        } elseif ($selectedUserId && $selectedUserId !== 'all') {
             $recurringTasksQuery->whereHas('assignedUsers', function ($q) use ($selectedUserId) {
                 $q->where('users.id', (int)$selectedUserId);
             });
@@ -130,7 +146,7 @@ class DashboardController extends Controller
                   ->orWhereNull('project_id');
             });
         }
-        if ($selectedUserId) {
+        if ($selectedUserId && $selectedUserId !== 'all') {
             $incidentsQuery->where(function ($q) use ($selectedUserId) {
                 $q->where('user_id', (int)$selectedUserId)
                   ->orWhere('assigned_user_id', (int)$selectedUserId);
@@ -139,7 +155,7 @@ class DashboardController extends Controller
         $incidents = $incidentsQuery->orderBy('created_at', 'desc')->get();
 
         // Si se seleccionó un usuario específico (filtro del admin), filtrar las tareas para sincronizar estadísticas y listas
-        if ($selectedUserId) {
+        if ($selectedUserId && $selectedUserId !== 'all') {
             $tasks = $tasks->filter(function ($task) use ($selectedUserId) {
                 return $task->assignedUsers->contains('id', (int)$selectedUserId);
             })->values();
@@ -189,7 +205,9 @@ class DashboardController extends Controller
 
                 if (!$inst) {
                     $inst = \App\Services\RecurringTaskService::ensureInstanceExists($rule, $today);
-                    $inst->load(['project', 'module', 'assignedUsers', 'subtasks', 'creator', 'recurringTask']);
+                    if ($inst) {
+                        $inst->load(['project', 'module', 'assignedUsers', 'subtasks', 'creator', 'recurringTask']);
+                    }
                 }
 
                 if ($inst) {
@@ -261,14 +279,18 @@ class DashboardController extends Controller
 
             if ($ruleStartDate->month === $thisMonth && !isset($seenMonth[$key])) {
                 $inst = \App\Services\RecurringTaskService::ensureInstanceExists($rule, $annualDate);
-                $inst->load(['project', 'module', 'assignedUsers', 'subtasks', 'creator', 'recurringTask']);
-                $seenMonth[$key] = $inst;
+                if ($inst) {
+                    $inst->load(['project', 'module', 'assignedUsers', 'subtasks', 'creator', 'recurringTask']);
+                    $seenMonth[$key] = $inst;
+                }
             }
 
             if (!isset($seenYear[$key])) {
                 $inst = \App\Services\RecurringTaskService::ensureInstanceExists($rule, $annualDate);
-                $inst->load(['project', 'module', 'assignedUsers', 'subtasks', 'creator', 'recurringTask']);
-                $seenYear[$key] = $inst;
+                if ($inst) {
+                    $inst->load(['project', 'module', 'assignedUsers', 'subtasks', 'creator', 'recurringTask']);
+                    $seenYear[$key] = $inst;
+                }
             }
         }
 
@@ -363,11 +385,18 @@ class DashboardController extends Controller
 
         $trashedBaseQuery = Task::onlyTrashed()
             ->with(['project', 'module', 'assignedUsers', 'subtasks', 'creator'])
-            ->whereHas('assignedUsers', function ($q) use ($user) {
-                $q->where('users.id', $user->id);
-            })
             ->whereIn('project_id', $visibleProjects->pluck('id'))
             ->where('deleted_at', '>=', Carbon::now()->subDays(30));
+
+        if ($activeProject) {
+            $trashedBaseQuery->where('project_id', $activeProject->id);
+        }
+
+        if ($user->isHelper()) {
+            $trashedBaseQuery->whereHas('assignedUsers', function ($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        }
 
         $allTrashCount = (clone $trashedBaseQuery)->count();
 
@@ -763,7 +792,18 @@ class DashboardController extends Controller
                     $inst = $ruleInstancesMap[$key] ?? null;
                     if (!$inst) {
                         $inst = \App\Services\RecurringTaskService::ensureInstanceExists($rule, $cDate);
-                        $ruleInstancesMap[$key] = $inst;
+                        if ($inst) {
+                            $ruleInstancesMap[$key] = $inst;
+                        }
+                    }
+
+                    if (!$inst) {
+                        $rowCells[$d] = [
+                            'scheduled' => false,
+                            'day' => $d,
+                            'weekIndex' => $wIdx,
+                        ];
+                        continue;
                     }
 
                     $isDone = ($inst->status === 'finalizado');

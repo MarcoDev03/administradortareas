@@ -267,6 +267,146 @@
 
     @yield('content')
 
+    <!-- Global Custom Delete Confirmation Modal (NegocioManager) -->
+    <div id="customDeleteConfirmModal" 
+         class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-3 sm:p-4 hidden transition-opacity duration-200"
+         role="dialog" aria-modal="true" aria-labelledby="customConfirmTitle" aria-describedby="customConfirmMessage"
+         onclick="if(event.target === this) closeDeleteConfirmModal(false)">
+        <div class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl max-w-md w-full p-5 sm:p-6 border border-slate-200 dark:border-slate-800 relative transition-all transform scale-100 space-y-4">
+            
+            <div class="flex items-start gap-3.5">
+                <div id="customConfirmIconWrapper" class="p-3 rounded-2xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 border border-red-200/80 dark:border-red-900/60 shrink-0 shadow-2xs">
+                    <i id="customConfirmIcon" data-lucide="trash-2" class="w-6 h-6"></i>
+                </div>
+                <div class="flex-1 min-w-0 pt-0.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <h3 id="customConfirmTitle" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight break-words">
+                            ¿Deseas eliminar este elemento?
+                        </h3>
+                        <button type="button" onclick="closeDeleteConfirmModal(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg p-1 transition cursor-pointer" title="Cerrar">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <p id="customConfirmMessage" class="mt-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed break-words">
+                        Esta acción no se puede deshacer y el registro será eliminado.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Warning Notice for Permanent / Irreversible actions -->
+            <div id="customConfirmPermanentNotice" class="hidden p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200/90 dark:border-amber-900/60 text-amber-900 dark:text-amber-200 text-xs flex items-start gap-2.5">
+                <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400"></i>
+                <span id="customConfirmPermanentText" class="font-medium leading-relaxed">
+                    Acción irreversible: Los elementos se eliminarán definitivamente y no se podrán recuperar.
+                </span>
+            </div>
+
+            <!-- Footer Action Buttons -->
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5">
+                <button type="button" id="customConfirmBtnCancel" onclick="closeDeleteConfirmModal(false)" 
+                    class="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition text-center cursor-pointer active:scale-98">
+                    Cancelar
+                </button>
+                <button type="button" id="customConfirmBtnOk" onclick="executeDeleteConfirmAction()" 
+                    class="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-red-600 hover:bg-red-500 rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-98 border border-red-700/20">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <span id="customConfirmBtnOkText">Eliminar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global Custom Delete Confirmation Handlers
+        let currentDeleteConfirmCallback = null;
+
+        window.openDeleteConfirm = function(options = {}) {
+            const modal = document.getElementById('customDeleteConfirmModal');
+            if (!modal) {
+                console.warn('customDeleteConfirmModal no encontrado en el DOM.');
+                if (typeof options.onConfirm === 'function') options.onConfirm();
+                return;
+            }
+
+            const titleEl = document.getElementById('customConfirmTitle');
+            const msgEl = document.getElementById('customConfirmMessage');
+            const okTextEl = document.getElementById('customConfirmBtnOkText');
+            const cancelBtn = document.getElementById('customConfirmBtnCancel');
+            const permNotice = document.getElementById('customConfirmPermanentNotice');
+            const permText = document.getElementById('customConfirmPermanentText');
+
+            if (titleEl) titleEl.textContent = options.title || '¿Deseas eliminar este elemento?';
+            if (msgEl) msgEl.textContent = options.message || 'Esta acción no se puede deshacer y el registro será eliminado.';
+            if (okTextEl) okTextEl.textContent = options.confirmText || 'Eliminar';
+            if (cancelBtn) cancelBtn.textContent = options.cancelText || 'Cancelar';
+
+            if (permNotice) {
+                if (options.isPermanent) {
+                    permNotice.classList.remove('hidden');
+                    if (permText) {
+                        permText.textContent = options.permanentText || 'Acción irreversible: Los elementos se eliminarán definitivamente y no se podrán recuperar.';
+                    }
+                } else {
+                    permNotice.classList.add('hidden');
+                }
+            }
+
+            currentDeleteConfirmCallback = options.onConfirm || null;
+            modal.classList.remove('hidden');
+
+            if (window.lucide) {
+                lucide.createIcons({ root: modal });
+            }
+        };
+
+        window.closeDeleteConfirmModal = function(confirmed = false) {
+            const modal = document.getElementById('customDeleteConfirmModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            if (!confirmed) {
+                currentDeleteConfirmCallback = null;
+            }
+        };
+
+        window.executeDeleteConfirmAction = function() {
+            const callback = currentDeleteConfirmCallback;
+            closeDeleteConfirmModal(true);
+            if (typeof callback === 'function') {
+                callback();
+            }
+        };
+
+        window.confirmDelete = function(event, formOrFn, options = {}) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            window.openDeleteConfirm({
+                ...options,
+                onConfirm: () => {
+                    if (typeof formOrFn === 'function') {
+                        formOrFn();
+                    } else if (formOrFn && typeof formOrFn.submit === 'function') {
+                        HTMLFormElement.prototype.submit.call(formOrFn);
+                    }
+                }
+            });
+
+            return false;
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('customDeleteConfirmModal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    closeDeleteConfirmModal(false);
+                }
+            }
+        });
+    </script>
+
     <script>
         // Dark / Light Theme Toggle Function
         function toggleTheme() {

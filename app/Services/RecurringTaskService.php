@@ -40,10 +40,11 @@ class RecurringTaskService
         $sMonthStr = $startOfMonth->toDateString();
         $eMonthStr = $endOfMonth->toDateString();
 
-        // Cargar en UNA SOLA consulta todas las instancias existentes de este mes para estas reglas
-        $existingInstances = Task::whereIn('recurring_task_id', $activeRules->pluck('id'))
+        // Cargar en UNA SOLA consulta todas las instancias existentes de este mes para estas reglas (incluyendo eliminadas en papelera para no duplicarlas)
+        $existingInstances = Task::withTrashed()
+            ->whereIn('recurring_task_id', $activeRules->pluck('id'))
             ->whereBetween('start_date', [$sMonthStr, $eMonthStr])
-            ->get(['id', 'recurring_task_id', 'start_date', 'status']);
+            ->get(['id', 'recurring_task_id', 'start_date', 'status', 'deleted_at']);
 
         // Mapa en memoria para comprobación O(1) instantánea sin round-trips a la base de datos
         $existingMap = [];
@@ -185,19 +186,21 @@ class RecurringTaskService
         return $instance;
     }
 
-    public static function ensureInstanceExists(RecurringTask $rule, Carbon $date): Task
+    public static function ensureInstanceExists(RecurringTask $rule, Carbon $date): ?Task
     {
         $dateStr = $date->toDateString();
 
-        // Check if an instance already exists for this rule and date
-        $instance = Task::where('recurring_task_id', $rule->id)
+        // Check if an instance already exists for this rule and date (including trashed)
+        $instance = Task::withTrashed()
+            ->where('recurring_task_id', $rule->id)
             ->whereDate('start_date', $dateStr)
             ->first();
 
-        if (!$instance) {
-            $instance = self::createInstance($rule, $date);
+        if ($instance) {
+            // Si la tarea fue enviada a la papelera (soft deleted), respetamos su eliminación y no la recreamos
+            return $instance->trashed() ? null : $instance;
         }
 
-        return $instance;
+        return self::createInstance($rule, $date);
     }
 }

@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
     Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.updateStatus');
+    Route::delete('/tasks/trash/empty', [TaskController::class, 'emptyTrash'])->name('tasks.emptyTrash');
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
     Route::patch('/tasks/{id}/restore', [TaskController::class, 'restore'])->name('tasks.restore');
     Route::delete('/tasks/{id}/force', [TaskController::class, 'forceDestroy'])->name('tasks.forceDestroy');
