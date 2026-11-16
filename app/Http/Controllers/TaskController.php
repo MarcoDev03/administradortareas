@@ -287,7 +287,25 @@ class TaskController extends Controller
 
     public function destroy(Task $task)
     {
+        $user = Auth::user();
+        if ($user && $user->isHelper()) {
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json(['error' => 'No tienes permisos para eliminar esta tarea.'], 403);
+            }
+            abort(403, 'No autorizado para eliminar tareas.');
+        }
+
+        $id = $task->id;
         $task->delete();
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json([
+                'success' => true,
+                'id' => $id,
+                'message' => 'Tarea enviada a la papelera exitosamente.'
+            ]);
+        }
+
         return back()->with('success', 'Tarea enviada a la papelera exitosamente.');
     }
 

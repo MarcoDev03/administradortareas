@@ -494,7 +494,7 @@
                 <button type="button" onclick="document.getElementById('contenedor-todas-tareas')?.scrollIntoView({behavior: 'smooth'})"
                     class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-indigo-400 text-white whitespace-nowrap transition shrink-0">
                     <span>Todas las tareas</span>
-                    <span class="text-[10px] px-1.5 py-0.2 rounded-full font-bold tab-counter-badge">{{ ($generalTasks ?? $tasks->filter(fn($t) => is_null($t->recurring_task_id)))->count() }}</span>
+                    <span id="subnav-all-tasks-counter" class="text-[10px] px-1.5 py-0.2 rounded-full font-bold tab-counter-badge">{{ ($generalTasks ?? $tasks->filter(fn($t) => is_null($t->recurring_task_id)))->count() }}</span>
                 </button>
 
                 <button type="button" onclick="document.getElementById('contenedor-periodicas')?.scrollIntoView({behavior: 'smooth'})"
@@ -506,7 +506,7 @@
                 <button type="button" onclick="document.getElementById('contenedor-tareas-vencidas')?.scrollIntoView({behavior: 'smooth'})"
                     class="flex items-center space-x-1.5 px-2.5 py-1.5 text-xs font-semibold border-b-2 border-transparent text-slate-300 hover:text-white whitespace-nowrap transition shrink-0">
                     <span>Vencidas</span>
-                    <span class="text-[10px] px-1.5 py-0.2 rounded-full font-bold tab-counter-badge {{ $overdueCount > 0 ? 'bg-red-500/80 text-white' : '' }}">{{ $overdueCount }}</span>
+                    <span id="subnav-overdue-counter" class="text-[10px] px-1.5 py-0.2 rounded-full font-bold tab-counter-badge {{ $overdueCount > 0 ? 'bg-red-500/80 text-white' : '' }}">{{ $overdueCount }}</span>
                 </button>
             @elseif($activeView === 'calendario')
                 <!-- Subnavegación Contextual: Calendario -->
@@ -764,7 +764,7 @@
                                     <i data-lucide="alert-triangle" class="w-5 h-5 lg:w-6 lg:h-6"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $overdueCount }}</span>
+                                    <span id="kpi-overdue-count" class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $overdueCount }}</span>
                                     <span class="text-xs sm:text-sm font-bold text-black dark:text-slate-300 mt-1.5 block truncate">Tareas vencidas</span>
                                 </div>
                             </div>
@@ -783,7 +783,7 @@
                                     <i data-lucide="clock" class="w-5 h-5 lg:w-6 lg:h-6"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $inProgressTasksCount }}</span>
+                                    <span id="kpi-in-progress-count" class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $inProgressTasksCount }}</span>
                                     <span class="text-xs sm:text-sm font-bold text-black dark:text-slate-300 mt-1.5 block truncate">En proceso</span>
                                 </div>
                             </div>
@@ -796,7 +796,7 @@
                                     <i data-lucide="search" class="w-5 h-5 lg:w-6 lg:h-6"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $inReviewTasksCount }}</span>
+                                    <span id="kpi-in-review-count" class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $inReviewTasksCount }}</span>
                                     <span class="text-xs sm:text-sm font-bold text-black dark:text-slate-300 mt-1.5 block truncate">En revisión</span>
                                 </div>
                             </div>
@@ -822,7 +822,7 @@
                                     <i data-lucide="repeat" class="w-5 h-5 lg:w-6 lg:h-6"></i>
                                 </div>
                                 <div class="min-w-0">
-                                    <span class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $recurringTasks->count() }}</span>
+                                    <span id="kpi-recurring-count" class="text-2xl sm:text-3xl lg:text-[34px] font-black text-black dark:text-white leading-none block tracking-tight">{{ $recurringTasks->count() }}</span>
                                     <span class="text-xs sm:text-sm font-bold text-black dark:text-slate-300 mt-1.5 block truncate">Tareas periódicas</span>
                                 </div>
                             </div>
@@ -937,6 +937,7 @@
                                         }
                                     @endphp
                                     <div onclick='openTaskModal(@json($t->load(["assignedUsers", "subtasks"])))'
+                                        data-task-id="{{ $t->id }}"
                                         data-status="{{ $t->status }}"
                                         data-overdue="{{ $isOverdue ? '1' : '0' }}"
                                         class="all-tasks-item {{ !$matchesInitial ? 'hidden' : '' }} p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-transparent bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/80 transition flex items-center justify-between gap-3 cursor-pointer group">
@@ -958,18 +959,28 @@
                                                 </p>
                                             </div>
                                         </div>
-                                        @if($t->assignedUsers->isNotEmpty())
-                                            <div class="flex items-center -space-x-1 shrink-0">
-                                                @foreach($t->assignedUsers->take(2) as $au)
-                                                    <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
-                                                        {{ $au->initials }}
-                                                    </span>
-                                                @endforeach
-                                            </div>
-                                        @endif
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            @if($t->assignedUsers->isNotEmpty())
+                                                <div class="flex items-center -space-x-1">
+                                                    @foreach($t->assignedUsers->take(2) as $au)
+                                                        <span class="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
+                                                            {{ $au->initials }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                            @if($user->isAdmin())
+                                                <button type="button"
+                                                    onclick="event.stopPropagation(); deleteDashboardTask({{ $t->id }}, '{{ addslashes($t->title) }}')"
+                                                    class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition"
+                                                    title="Eliminar tarea">
+                                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                </button>
+                                            @endif
+                                        </div>
                                     </div>
                                 @empty
-                                    <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                                    <div id="all-tasks-empty-global-msg" class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
                                         <i data-lucide="clipboard-x" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
                                         <span>No hay tareas registradas para este criterio.</span>
                                     </div>
@@ -1064,6 +1075,7 @@
                                             $temporalText = 'Hoy · ' . $timeStr;
                                         @endphp
                                         <div onclick='openTaskModal(@json($rtTask->load(["assignedUsers", "subtasks"])))'
+                                            data-task-id="{{ $rtTask->id }}"
                                             class="periodic-task-item p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-transparent bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/80 transition flex items-center justify-between gap-3 cursor-pointer group">
                                             <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                                                 <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl {{ $iconBoxClass }} flex items-center justify-center shrink-0">
@@ -1083,15 +1095,22 @@
                                                     </p>
                                                 </div>
                                             </div>
-                                            @if($rtTask->assignedUsers->isNotEmpty())
-                                                <div class="flex items-center -space-x-1 shrink-0">
-                                                    @foreach($rtTask->assignedUsers->take(2) as $au)
-                                                        <span class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
-                                                            {{ $au->initials }}
-                                                        </span>
-                                                    @endforeach
-                                                </div>
-                                            @endif
+                                            <div class="flex items-center gap-1.5 shrink-0">
+                                                @if($rtTask->assignedUsers->isNotEmpty())
+                                                    <div class="flex items-center -space-x-1">
+                                                        @foreach($rtTask->assignedUsers->take(2) as $au)
+                                                            <span class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
+                                                                {{ $au->initials }}
+                                                            </span>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+                                                @if($user->isAdmin())
+                                                    <button type="button" onclick="event.stopPropagation(); deleteDashboardTask({{ $rtTask->id }}, '{{ addslashes($rtTask->title) }}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition" title="Eliminar tarea">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                @endif
+                                            </div>
                                         </div>
                                     @empty
                                         <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
@@ -1145,6 +1164,7 @@
                                             }
                                         @endphp
                                         <div onclick='openTaskModal(@json($rtTask->load(["assignedUsers", "subtasks"])))'
+                                            data-task-id="{{ $rtTask->id }}"
                                             class="periodic-task-item p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-transparent bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/80 transition flex items-center justify-between gap-3 cursor-pointer group">
                                             <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                                                 <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl {{ $iconBoxClass }} flex items-center justify-center shrink-0">
@@ -1164,15 +1184,22 @@
                                                     </p>
                                                 </div>
                                             </div>
-                                            @if($rtTask->assignedUsers->isNotEmpty())
-                                                <div class="flex items-center -space-x-1 shrink-0">
-                                                    @foreach($rtTask->assignedUsers->take(2) as $au)
-                                                        <span class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
-                                                            {{ $au->initials }}
-                                                        </span>
-                                                    @endforeach
-                                                </div>
-                                            @endif
+                                            <div class="flex items-center gap-1.5 shrink-0">
+                                                @if($rtTask->assignedUsers->isNotEmpty())
+                                                    <div class="flex items-center -space-x-1">
+                                                        @foreach($rtTask->assignedUsers->take(2) as $au)
+                                                            <span class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
+                                                                {{ $au->initials }}
+                                                            </span>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+                                                @if($user->isAdmin())
+                                                    <button type="button" onclick="event.stopPropagation(); deleteDashboardTask({{ $rtTask->id }}, '{{ addslashes($rtTask->title) }}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition" title="Eliminar tarea">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                @endif
+                                            </div>
                                         </div>
                                     @empty
                                         <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
@@ -1226,6 +1253,7 @@
                                             }
                                         @endphp
                                         <div onclick='openTaskModal(@json($rtTask->load(["assignedUsers", "subtasks"])))'
+                                            data-task-id="{{ $rtTask->id }}"
                                             class="periodic-task-item p-2.5 sm:p-3 rounded-xl border border-slate-100 dark:border-transparent bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100/70 dark:hover:bg-slate-800/80 transition flex items-center justify-between gap-3 cursor-pointer group">
                                             <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                                                 <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl {{ $iconBoxClass }} flex items-center justify-center shrink-0">
@@ -1245,15 +1273,22 @@
                                                     </p>
                                                 </div>
                                             </div>
-                                            @if($rtTask->assignedUsers->isNotEmpty())
-                                                <div class="flex items-center -space-x-1 shrink-0">
-                                                    @foreach($rtTask->assignedUsers->take(2) as $au)
-                                                        <span class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
-                                                            {{ $au->initials }}
-                                                        </span>
-                                                    @endforeach
-                                                </div>
-                                            @endif
+                                            <div class="flex items-center gap-1.5 shrink-0">
+                                                @if($rtTask->assignedUsers->isNotEmpty())
+                                                    <div class="flex items-center -space-x-1">
+                                                        @foreach($rtTask->assignedUsers->take(2) as $au)
+                                                            <span class="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
+                                                                {{ $au->initials }}
+                                                            </span>
+                                                        @endforeach
+                                                    </div>
+                                                @endif
+                                                @if($user->isAdmin())
+                                                    <button type="button" onclick="event.stopPropagation(); deleteDashboardTask({{ $rtTask->id }}, '{{ addslashes($rtTask->title) }}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition" title="Eliminar tarea">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                @endif
+                                            </div>
                                         </div>
                                     @empty
                                         <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
@@ -1274,7 +1309,7 @@
                                     </div>
                                     <h3 class="text-sm font-bold text-slate-900 dark:text-white truncate">Tareas vencidas</h3>
                                 </div>
-                                <span class="text-xs font-bold px-2 py-0.5 rounded-full {{ $overdueCount > 0 ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' }} shrink-0">
+                                <span id="overdue-tasks-count-badge" class="text-xs font-bold px-2 py-0.5 rounded-full {{ $overdueCount > 0 ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' }} shrink-0">
                                     {{ $overdueCount }}
                                 </span>
                             </div>
@@ -1286,6 +1321,7 @@
                                         $temporalText = 'Debía realizarse: ' . $dueDateFormatted . ($ot->end_time ? ' · ' . substr($ot->end_time, 0, 5) : '');
                                     @endphp
                                     <div onclick='openTaskModal(@json($ot->load(["assignedUsers", "subtasks"])))'
+                                        data-task-id="{{ $ot->id }}"
                                         class="overdue-task-item p-2.5 sm:p-3 rounded-xl border border-red-200/50 dark:border-transparent bg-red-50/40 dark:bg-red-950/20 hover:bg-red-50/70 dark:hover:bg-red-950/40 transition flex items-center justify-between gap-3 cursor-pointer group">
                                         <div class="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                                             <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
@@ -1305,15 +1341,22 @@
                                                 </p>
                                             </div>
                                         </div>
-                                        @if($ot->assignedUsers->isNotEmpty())
-                                            <div class="flex items-center -space-x-1 shrink-0">
-                                                @foreach($ot->assignedUsers->take(2) as $au)
-                                                    <span class="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
-                                                        {{ $au->initials }}
-                                                    </span>
-                                                @endforeach
-                                            </div>
-                                        @endif
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            @if($ot->assignedUsers->isNotEmpty())
+                                                <div class="flex items-center -space-x-1">
+                                                    @foreach($ot->assignedUsers->take(2) as $au)
+                                                        <span class="w-6 h-6 rounded-full bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300 font-bold text-[9px] flex items-center justify-center border border-white dark:border-transparent" title="{{ $au->name }}">
+                                                            {{ $au->initials }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                            @if($user->isAdmin())
+                                                <button type="button" onclick="event.stopPropagation(); deleteDashboardTask({{ $ot->id }}, '{{ addslashes($ot->title) }}')" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition" title="Eliminar tarea">
+                                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                </button>
+                                            @endif
+                                        </div>
                                     </div>
                                 @empty
                                     <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
@@ -6975,6 +7018,165 @@
                 });
             }
         });
+    }
+
+    // ---- Dashboard Task Deletion (Admin - Resumen Lists) ----
+    function deleteDashboardTask(taskId, taskTitle) {
+        if (!taskId) return;
+        const title = taskTitle ? `¿Eliminar "${taskTitle}"?` : '¿Eliminar tarea?';
+
+        window.openDeleteConfirm({
+            title: title,
+            message: 'La tarea se enviará a la papelera. Podrás recuperarla más tarde si es necesario.',
+            confirmText: 'Eliminar tarea',
+            isPermanent: false,
+            onConfirm: () => {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+                fetch(`/tasks/${taskId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(async res => {
+                    const data = await res.json().catch(() => null);
+                    if (!res.ok) {
+                        throw new Error(data?.error || data?.message || 'Error al eliminar la tarea');
+                    }
+                    return data;
+                })
+                .then(data => {
+                    removeDashboardTaskElements(taskId);
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert(err.message || 'Error de red al eliminar la tarea.');
+                });
+            }
+        });
+    }
+
+    function removeDashboardTaskElements(taskId) {
+        if (!taskId) return;
+        const taskElements = document.querySelectorAll(`[data-task-id="${taskId}"]`);
+        if (!taskElements.length) return;
+
+        let wasOverdue = false;
+        let taskStatus = null;
+
+        taskElements.forEach(el => {
+            if (el.classList.contains('overdue-task-item') || el.getAttribute('data-overdue') === '1') {
+                wasOverdue = true;
+            }
+            const statusAttr = el.getAttribute('data-status');
+            if (statusAttr) {
+                taskStatus = statusAttr;
+            }
+            el.remove();
+        });
+
+        // 1. Actualizar Contenedor: Todas las tareas
+        const allList = document.getElementById('all-tasks-list');
+        const filterSelect = document.getElementById('resumen-all-tasks-status-filter');
+        const currentFilter = filterSelect ? filterSelect.value : 'all';
+        if (typeof window.filterAllTasksByStatus === 'function') {
+            window.filterAllTasksByStatus(currentFilter);
+        }
+        const remainingAll = document.querySelectorAll('.all-tasks-item').length;
+        const allBadge = document.getElementById('all-tasks-count-badge');
+        if (allBadge && (currentFilter === 'all' || !currentFilter)) {
+            allBadge.textContent = remainingAll;
+        }
+        const subnavAll = document.getElementById('subnav-all-tasks-counter');
+        if (subnavAll) {
+            subnavAll.textContent = remainingAll;
+        }
+        if (remainingAll === 0 && allList && !allList.querySelector('.text-center')) {
+            allList.innerHTML = `
+                <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                    <i data-lucide="check-circle-2" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
+                    <span>No hay tareas creadas todavía.</span>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons({ root: allList });
+        }
+
+        // 2. Actualizar Contenedor: Tareas periódicas
+        const periodSelect = document.getElementById('resumen-periodic-period-filter');
+        const currentPeriod = periodSelect ? periodSelect.value : 'hoy';
+        if (typeof window.changePeriodicPeriod === 'function') {
+            window.changePeriodicPeriod(currentPeriod);
+        }
+        ['hoy', 'mes', 'anio'].forEach(pKey => {
+            const pList = document.getElementById(`periodic-tasks-list-${pKey}`);
+            if (pList && pList.querySelectorAll('.periodic-task-item').length === 0 && !pList.querySelector('.text-center')) {
+                const textPeriod = pKey === 'hoy' ? 'hoy' : (pKey === 'mes' ? 'este mes' : 'este año');
+                const iconName = pKey === 'hoy' ? 'calendar-check' : (pKey === 'mes' ? 'calendar-range' : 'calendar');
+                pList.innerHTML = `
+                    <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                        <i data-lucide="${iconName}" class="w-8 h-8 text-slate-300 dark:text-slate-600"></i>
+                        <span>No hay tareas periódicas programadas para ${textPeriod}.</span>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons({ root: pList });
+            }
+        });
+
+        // 3. Actualizar Contenedor: Tareas vencidas
+        const overdueContainer = document.getElementById('contenedor-tareas-vencidas');
+        if (overdueContainer) {
+            const overdueItems = overdueContainer.querySelectorAll('.overdue-task-item');
+            const overdueCount = overdueItems.length;
+            const overdueBadge = document.getElementById('overdue-tasks-count-badge');
+            if (overdueBadge) {
+                overdueBadge.textContent = overdueCount;
+                if (overdueCount > 0) {
+                    overdueBadge.className = overdueBadge.className.replace(/bg-slate-[^\s]+/g, '').replace(/text-slate-[^\s]+/g, '') + ' bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300';
+                } else {
+                    overdueBadge.className = overdueBadge.className.replace(/bg-red-[^\s]+/g, '').replace(/text-red-[^\s]+/g, '') + ' bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
+                }
+            }
+            const kpiOverdue = document.getElementById('kpi-overdue-count');
+            if (kpiOverdue) {
+                kpiOverdue.textContent = overdueCount;
+            }
+            const subnavOverdue = document.getElementById('subnav-overdue-counter');
+            if (subnavOverdue) {
+                subnavOverdue.textContent = overdueCount;
+            }
+
+            const overdueScrollList = overdueContainer.querySelector('.space-y-2\\.5');
+            if (overdueCount === 0 && overdueScrollList && !overdueScrollList.querySelector('.text-center')) {
+                overdueScrollList.innerHTML = `
+                    <div class="text-center py-12 text-slate-400 dark:text-slate-500 text-xs flex flex-col items-center justify-center gap-2">
+                        <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                            <i data-lucide="check" class="w-5 h-5"></i>
+                        </div>
+                        <span class="font-bold text-slate-700 dark:text-slate-300">¡Todo al día!</span>
+                        <span class="text-[11px]">No hay tareas vencidas pendientes.</span>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons({ root: overdueScrollList });
+            }
+        }
+
+        // 4. Actualizar métricas KPI según estado
+        if (taskStatus === 'en_proceso') {
+            const kpiProg = document.getElementById('kpi-in-progress-count');
+            if (kpiProg) {
+                const currentVal = parseInt(kpiProg.textContent) || 0;
+                kpiProg.textContent = Math.max(0, currentVal - 1);
+            }
+        } else if (taskStatus === 'en_revision') {
+            const kpiRev = document.getElementById('kpi-in-review-count');
+            if (kpiRev) {
+                const currentVal = parseInt(kpiRev.textContent) || 0;
+                kpiRev.textContent = Math.max(0, currentVal - 1);
+            }
+        }
     }
 
     // Initialize Mobile Sub-nav states on load
